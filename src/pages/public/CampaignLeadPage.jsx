@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowRight, CheckCircle2, ExternalLink, Loader2 } from 'lucide-react'
+import { ArrowRight, Loader2, ShieldAlert } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 
 const initialForm = {
@@ -11,26 +11,25 @@ const initialForm = {
     course: '',
     year: '',
     city: '',
-    interest: 'Internship',
+    interest: '',
     skills: '',
     resume_link: '',
     team_name: '',
-    feedback: '',
     rating: '',
+    feedback: '',
     why_join: '',
 }
 
-function formTitle(formType) {
-    const titles = {
-        basic_student_form: 'Student details',
-        internship_form: 'Internship interest form',
-        event_form: 'Event registration form',
-        feedback_form: 'Feedback form',
-        ambassador_application_form: 'Ambassador application form',
-        none: 'Campaign form',
+function normalizeExternalUrl(url) {
+    if (!url) return ''
+
+    const cleanedUrl = url.trim()
+
+    if (cleanedUrl.startsWith('http://') || cleanedUrl.startsWith('https://')) {
+        return cleanedUrl
     }
 
-    return titles[formType] || 'Student details'
+    return `https://${cleanedUrl}`
 }
 
 export default function CampaignLeadPage() {
@@ -40,78 +39,79 @@ export default function CampaignLeadPage() {
     const [assignment, setAssignment] = useState(null)
     const [campaign, setCampaign] = useState(null)
     const [colleges, setColleges] = useState([])
+    const [settings, setSettings] = useState(null)
     const [form, setForm] = useState(initialForm)
     const [loading, setLoading] = useState(true)
-    const [saving, setSaving] = useState(false)
-    const [error, setError] = useState('')
+    const [submitting, setSubmitting] = useState(false)
+    const [message, setMessage] = useState('')
 
     const loadPage = async () => {
         setLoading(true)
-        setError('')
+        setMessage('')
+
+        const settingsResult = await supabase
+            .from('app_settings')
+            .select('*')
+            .eq('id', true)
+            .maybeSingle()
 
         const assignmentResult = await supabase
             .from('ambassador_campaigns')
-            .select('id, ambassador_id, campaign_id, ref_code, status')
+            .select(`
+        id,
+        ref_code,
+        ambassador_id,
+        status,
+        campaigns (
+          id,
+          title,
+          description,
+          type,
+          status,
+          action_mode,
+          form_type,
+          external_url,
+          target_url,
+          primary_action
+        )
+      `)
             .eq('ref_code', refCode)
             .eq('status', 'active')
             .maybeSingle()
 
-        if (assignmentResult.error) {
-            setError(assignmentResult.error.message)
-            setLoading(false)
-            return
-        }
-
-        if (!assignmentResult.data) {
-            setError('This referral link is not active.')
-            setLoading(false)
-            return
-        }
-
-        const campaignResult = await supabase
-            .from('campaigns')
-            .select(`
-        id,
-        title,
-        description,
-        type,
-        status,
-        action_mode,
-        form_type,
-        external_url,
-        target_url,
-        primary_action
-      `)
-            .eq('id', assignmentResult.data.campaign_id)
-            .eq('status', 'active')
-            .maybeSingle()
-
-        if (campaignResult.error) {
-            setError(campaignResult.error.message)
-            setLoading(false)
-            return
-        }
-
-        if (!campaignResult.data) {
-            setError('This campaign is not active right now.')
-            setLoading(false)
-            return
-        }
-
         const collegesResult = await supabase
             .from('colleges')
-            .select('id, name, city')
+            .select('id, name, city, status')
             .eq('status', 'active')
             .order('name', { ascending: true })
 
-        if (collegesResult.error) {
-            setError(collegesResult.error.message)
+        if (settingsResult.error) {
+            setMessage(settingsResult.error.message)
             setLoading(false)
             return
         }
 
+        if (assignmentResult.error) {
+            setMessage(assignmentResult.error.message)
+            setLoading(false)
+            return
+        }
+
+        if (!assignmentResult.data || assignmentResult.data.campaigns?.status !== 'active') {
+            setMessage('This referral link is not active.')
+            setLoading(false)
+            return
+        }
+
+        if (collegesResult.error) {
+            setMessage(collegesResult.error.message)
+            setLoading(false)
+            return
+        }
+
+        setSettings(settingsResult.data || null)
         setAssignment(assignmentResult.data)
-        setCampaign(campaignResult.data)
+        setCampaign(assignmentResult.data.campaigns)
         setColleges(collegesResult.data || [])
         setLoading(false)
     }
@@ -120,367 +120,374 @@ export default function CampaignLeadPage() {
         loadPage()
     }, [refCode])
 
-    const normalizeExternalUrl = (url) => {
-        if (!url) return ''
-
-        const cleanedUrl = url.trim()
-
-        if (
-            cleanedUrl.startsWith('http://') ||
-            cleanedUrl.startsWith('https://')
-        ) {
-            return cleanedUrl
-        }
-
-        return `https://${cleanedUrl}`
-    }
-
     const getExternalUrl = () => {
         return normalizeExternalUrl(campaign?.external_url || campaign?.target_url || '')
     }
 
-    const handleExternalContinue = () => {
-        const url = getExternalUrl()
-
-        if (!url) {
-            setError('External link is missing for this campaign.')
-            return
-        }
-
-        window.open(url, '_blank', 'noreferrer')
-    }
-
-    const handleSubmit = async (e) => {
+    const submitLead = async (e) => {
         e.preventDefault()
-        setSaving(true)
-        setError('')
-
-        if (!assignment || !campaign) {
-            setError('Campaign data is missing. Refresh and try again.')
-            setSaving(false)
-            return
-        }
+        setSubmitting(true)
+        setMessage('')
 
         const rawAnswers = {
-            skills: form.skills.trim() || null,
-            resume_link: form.resume_link.trim() || null,
-            team_name: form.team_name.trim() || null,
-            feedback: form.feedback.trim() || null,
-            rating: form.rating.trim() || null,
-            why_join: form.why_join.trim() || null,
+            skills: form.skills,
+            resume_link: form.resume_link,
+            team_name: form.team_name,
+            rating: form.rating,
+            feedback: form.feedback,
+            why_join: form.why_join,
         }
 
-        const leadResult = await supabase.from('leads').insert({
-            campaign_id: campaign.id,
-            ambassador_id: assignment.ambassador_id,
-            college_id: form.college_id || null,
-            student_name: form.student_name.trim(),
-            email: form.email.trim() || null,
-            phone: form.phone.trim(),
-            course: form.course.trim() || null,
-            year: form.year.trim() || null,
-            city: form.city.trim() || null,
-            interest: form.interest,
-            source: 'referral_form',
-            status: 'new',
-            form_type: campaign.form_type,
-            raw_answers: rawAnswers,
-        })
+        const result = await supabase
+            .from('leads')
+            .insert({
+                campaign_id: campaign.id,
+                ambassador_id: assignment.ambassador_id,
+                student_name: form.student_name.trim(),
+                email: form.email.trim() || null,
+                phone: form.phone.trim(),
+                college_id: form.college_id || null,
+                course: form.course.trim() || null,
+                year: form.year.trim() || null,
+                city: form.city.trim() || null,
+                interest: form.interest.trim() || null,
+                status: 'new',
+                form_type: campaign.form_type || 'basic_student_form',
+                raw_answers: rawAnswers,
+            })
 
-        if (leadResult.error) {
-            setError(leadResult.error.message)
-            setSaving(false)
+        if (result.error) {
+            setMessage(result.error.message)
+            setSubmitting(false)
             return
         }
+
+        const targetUrl = getExternalUrl()
 
         navigate('/thank-you', {
             state: {
                 campaignTitle: campaign.title,
-                targetUrl: campaign.action_mode === 'hybrid' ? getExternalUrl() : null,
+                targetUrl:
+                    campaign.action_mode === 'hybrid' && targetUrl
+                        ? targetUrl
+                        : '',
             },
         })
     }
 
+    const renderExtraFields = () => {
+        if (campaign?.form_type === 'internship_form') {
+            return (
+                <>
+                    <input
+                        value={form.skills}
+                        onChange={(e) => setForm({ ...form, skills: e.target.value })}
+                        className="w-full rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
+                        placeholder="Skills, example: React, Python, Canva"
+                    />
+
+                    <input
+                        value={form.resume_link}
+                        onChange={(e) => setForm({ ...form, resume_link: e.target.value })}
+                        className="w-full rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
+                        placeholder="Resume link optional"
+                    />
+                </>
+            )
+        }
+
+        if (campaign?.form_type === 'event_form') {
+            return (
+                <input
+                    value={form.team_name}
+                    onChange={(e) => setForm({ ...form, team_name: e.target.value })}
+                    className="w-full rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
+                    placeholder="Team name optional"
+                />
+            )
+        }
+
+        if (campaign?.form_type === 'feedback_form') {
+            return (
+                <>
+                    <select
+                        value={form.rating}
+                        onChange={(e) => setForm({ ...form, rating: e.target.value })}
+                        className="w-full rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
+                    >
+                        <option value="">Select rating</option>
+                        <option value="5">5 - Excellent</option>
+                        <option value="4">4 - Good</option>
+                        <option value="3">3 - Average</option>
+                        <option value="2">2 - Poor</option>
+                        <option value="1">1 - Very poor</option>
+                    </select>
+
+                    <textarea
+                        value={form.feedback}
+                        onChange={(e) => setForm({ ...form, feedback: e.target.value })}
+                        className="min-h-24 w-full rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
+                        placeholder="Write your feedback"
+                    />
+                </>
+            )
+        }
+
+        if (campaign?.form_type === 'ambassador_application_form') {
+            return (
+                <textarea
+                    value={form.why_join}
+                    onChange={(e) => setForm({ ...form, why_join: e.target.value })}
+                    className="min-h-24 w-full rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
+                    placeholder="Why do you want to become a Frint ambassador?"
+                />
+            )
+        }
+
+        return null
+    }
+
     if (loading) {
         return (
-            <main className="flex min-h-screen items-center justify-center bg-[var(--frint-bg)] px-4">
-                <div className="rounded-[28px] border frint-border bg-[var(--frint-card)] p-8 text-center">
-                    <Loader2 className="mx-auto animate-spin text-[#0060f8]" size={28} />
-                    <p className="mt-4 text-sm font-black frint-muted">
-                        Loading form...
-                    </p>
+            <div className="frint-page flex min-h-screen items-center justify-center p-4">
+                <div className="frint-card flex items-center gap-3 rounded-[28px] px-6 py-5">
+                    <Loader2 className="animate-spin text-[#0060f8]" size={22} />
+                    <p className="text-sm font-black frint-muted">Loading form...</p>
                 </div>
-            </main>
+            </div>
         )
     }
 
-    if (error && !campaign) {
+    if (settings?.maintenance_mode) {
         return (
-            <main className="flex min-h-screen items-center justify-center bg-[var(--frint-bg)] px-4">
-                <div className="max-w-md rounded-[28px] border frint-border bg-[var(--frint-card)] p-8 text-center">
-                    <img src="/logo.svg" alt="Frint" className="mx-auto h-12" />
-                    <h1 className="mt-6 text-2xl font-black text-[var(--frint-text)]">
+            <div className="frint-page flex min-h-screen items-center justify-center p-4">
+                <section className="frint-card w-full max-w-md rounded-[32px] p-7 text-center">
+                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50 text-red-600">
+                        <ShieldAlert size={27} />
+                    </div>
+
+                    <img
+                        src="/logo.svg"
+                        alt="Frint"
+                        className="mx-auto mt-5 h-10 w-auto object-contain"
+                    />
+
+                    <h1 className="mt-5 text-2xl font-black text-[var(--frint-text)]">
+                        Forms are paused
+                    </h1>
+
+                    <p className="mt-3 text-sm font-bold leading-6 frint-muted">
+                        Frint is currently updating the ambassador system. Please try again later.
+                    </p>
+
+                    {(settings.support_email || settings.support_whatsapp) && (
+                        <div className="mt-5 rounded-[22px] bg-[var(--frint-soft-card)] p-4 text-sm font-bold frint-muted">
+                            {settings.support_email && <p>{settings.support_email}</p>}
+                            {settings.support_whatsapp && <p>{settings.support_whatsapp}</p>}
+                        </div>
+                    )}
+                </section>
+            </div>
+        )
+    }
+
+    if (message || !campaign) {
+        return (
+            <div className="frint-page flex min-h-screen items-center justify-center p-4">
+                <section className="frint-card w-full max-w-md rounded-[32px] p-7 text-center">
+                    <img
+                        src="/logo.svg"
+                        alt="Frint"
+                        className="mx-auto h-10 w-auto object-contain"
+                    />
+
+                    <h1 className="mt-5 text-2xl font-black text-[var(--frint-text)]">
                         Link unavailable
                     </h1>
-                    <p className="mt-3 text-sm font-bold frint-muted">
-                        {error}
-                    </p>
-                </div>
-            </main>
-        )
-    }
 
-    if (campaign?.action_mode === 'tracking_only') {
-        return (
-            <main className="flex min-h-screen items-center justify-center bg-[var(--frint-bg)] px-4">
-                <section className="max-w-md rounded-[32px] border frint-border bg-[var(--frint-card)] p-8 text-center">
-                    <img src="/logo.svg" alt="Frint" className="mx-auto h-12" />
-                    <h1 className="mt-7 text-3xl font-black text-[var(--frint-text)]">
-                        Internal campaign
-                    </h1>
-                    <p className="mt-3 text-sm font-bold frint-muted">
-                        This campaign is used for internal tracking and does not have a public form.
+                    <p className="mt-3 text-sm font-bold leading-6 frint-muted">
+                        {message || 'This campaign link is not available right now.'}
                     </p>
                 </section>
-            </main>
+            </div>
         )
     }
 
-    if (campaign?.action_mode === 'external_link') {
-        return (
-            <main className="flex min-h-screen items-center justify-center bg-[var(--frint-bg)] px-4">
-                <section className="max-w-md rounded-[32px] border frint-border bg-[var(--frint-card)] p-8 text-center">
-                    <img src="/logo.svg" alt="Frint" className="mx-auto h-12" />
+    const externalUrl = getExternalUrl()
 
-                    <div className="mx-auto mt-8 flex h-16 w-16 items-center justify-center rounded-full bg-blue-50 text-[#0060f8]">
-                        <ExternalLink size={32} />
-                    </div>
+    if (campaign.action_mode === 'external_link') {
+        return (
+            <div className="frint-page flex min-h-screen items-center justify-center p-4">
+                <section className="frint-card w-full max-w-lg rounded-[32px] p-7">
+                    <img
+                        src="/logo.svg"
+                        alt="Frint"
+                        className="h-10 w-auto object-contain"
+                    />
 
                     <h1 className="mt-6 text-3xl font-black text-[var(--frint-text)]">
                         {campaign.title}
                     </h1>
 
-                    <p className="mt-3 text-sm font-bold frint-muted">
-                        Continue to the official Frint campaign link.
-                    </p>
+                    {campaign.description && (
+                        <p className="mt-3 text-sm font-bold leading-6 frint-muted">
+                            {campaign.description}
+                        </p>
+                    )}
 
-                    {error && (
-                        <div className="mt-5 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
-                            {error}
+                    {settings?.public_form_notice && (
+                        <div className="mt-5 rounded-[22px] bg-[var(--frint-soft-card)] p-4 text-sm font-bold frint-muted">
+                            {settings.public_form_notice}
                         </div>
                     )}
 
                     <button
-                        onClick={handleExternalContinue}
-                        className="frint-primary-btn mt-7 flex w-full items-center justify-center gap-2 px-5 py-3 text-sm"
+                        onClick={() => window.location.href = externalUrl}
+                        className="frint-primary-btn mt-6 flex w-full items-center justify-center gap-2 px-5 py-3 text-sm"
                     >
                         Continue
                         <ArrowRight size={17} />
                     </button>
                 </section>
-            </main>
+            </div>
+        )
+    }
+
+    if (campaign.action_mode === 'tracking_only') {
+        return (
+            <div className="frint-page flex min-h-screen items-center justify-center p-4">
+                <section className="frint-card w-full max-w-md rounded-[32px] p-7 text-center">
+                    <img
+                        src="/logo.svg"
+                        alt="Frint"
+                        className="mx-auto h-10 w-auto object-contain"
+                    />
+
+                    <h1 className="mt-5 text-2xl font-black text-[var(--frint-text)]">
+                        Internal campaign
+                    </h1>
+
+                    <p className="mt-3 text-sm font-bold leading-6 frint-muted">
+                        This campaign is for internal tracking only.
+                    </p>
+                </section>
+            </div>
         )
     }
 
     return (
-        <main className="min-h-screen bg-[var(--frint-bg)] px-4 py-8">
-            <div className="mx-auto max-w-5xl">
-                <header className="mb-8 flex items-center justify-between">
-                    <img src="/logo.svg" alt="Frint" className="h-12 w-auto" />
+        <div className="frint-page min-h-screen px-4 py-8">
+            <main className="mx-auto max-w-xl">
+                <section className="frint-card rounded-[32px] p-6">
+                    <img
+                        src="/logo.svg"
+                        alt="Frint"
+                        className="h-10 w-auto object-contain"
+                    />
 
-                    <span className="rounded-full bg-blue-50 px-4 py-2 text-xs font-black text-[#0060f8]">
-                        Frint Form
-                    </span>
-                </header>
+                    <h1 className="mt-6 text-3xl font-black text-[var(--frint-text)]">
+                        {campaign.title}
+                    </h1>
 
-                <div className="grid gap-6 lg:grid-cols-[0.85fr_1.15fr]">
-                    <section className="frint-card rounded-[30px] p-6">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-[#0060f8]">
-                            <CheckCircle2 size={23} />
+                    {campaign.description && (
+                        <p className="mt-3 text-sm font-bold leading-6 frint-muted">
+                            {campaign.description}
+                        </p>
+                    )}
+
+                    {settings?.public_form_notice && (
+                        <div className="mt-5 rounded-[22px] bg-[var(--frint-soft-card)] p-4 text-sm font-bold frint-muted">
+                            {settings.public_form_notice}
+                        </div>
+                    )}
+
+                    {message && (
+                        <div className="mt-5 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+                            {message}
+                        </div>
+                    )}
+
+                    <form onSubmit={submitLead} className="mt-6 space-y-4">
+                        <input
+                            value={form.student_name}
+                            onChange={(e) => setForm({ ...form, student_name: e.target.value })}
+                            className="w-full rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
+                            placeholder="Full name"
+                            required
+                        />
+
+                        <input
+                            value={form.phone}
+                            onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                            className="w-full rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
+                            placeholder="Phone number"
+                            required
+                        />
+
+                        <input
+                            type="email"
+                            value={form.email}
+                            onChange={(e) => setForm({ ...form, email: e.target.value })}
+                            className="w-full rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
+                            placeholder="Email optional"
+                        />
+
+                        <select
+                            value={form.college_id}
+                            onChange={(e) => setForm({ ...form, college_id: e.target.value })}
+                            className="w-full rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
+                        >
+                            <option value="">Select college optional</option>
+                            {colleges.map((college) => (
+                                <option key={college.id} value={college.id}>
+                                    {college.name}
+                                </option>
+                            ))}
+                        </select>
+
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            <input
+                                value={form.course}
+                                onChange={(e) => setForm({ ...form, course: e.target.value })}
+                                className="w-full rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
+                                placeholder="Course"
+                            />
+
+                            <input
+                                value={form.year}
+                                onChange={(e) => setForm({ ...form, year: e.target.value })}
+                                className="w-full rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
+                                placeholder="Year"
+                            />
                         </div>
 
-                        <h1 className="mt-6 text-3xl font-black text-[var(--frint-text)]">
-                            {campaign.title}
-                        </h1>
+                        <input
+                            value={form.city}
+                            onChange={(e) => setForm({ ...form, city: e.target.value })}
+                            className="w-full rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
+                            placeholder="City"
+                        />
 
-                        <p className="mt-3 text-sm font-bold frint-muted">
-                            Fill the form to register your interest through Frint.
-                        </p>
+                        <input
+                            value={form.interest}
+                            onChange={(e) => setForm({ ...form, interest: e.target.value })}
+                            className="w-full rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
+                            placeholder="Interest, example: Internship, Event, Workshop"
+                        />
 
-                        {campaign.description && (
-                            <p className="mt-5 rounded-[22px] bg-[var(--frint-soft-card)] p-4 text-sm font-bold frint-muted">
-                                {campaign.description}
-                            </p>
-                        )}
+                        {renderExtraFields()}
 
-                        {campaign.action_mode === 'hybrid' && (
-                            <p className="mt-5 rounded-[22px] bg-blue-50 p-4 text-sm font-bold text-[#0060f8]">
-                                After submitting, you will get the next link.
-                            </p>
-                        )}
-                    </section>
-
-                    <section className="frint-card rounded-[30px] p-6">
-                        <h2 className="text-xl font-black text-[var(--frint-text)]">
-                            {formTitle(campaign.form_type)}
-                        </h2>
-
-                        {error && (
-                            <div className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
-                                {error}
-                            </div>
-                        )}
-
-                        <form onSubmit={handleSubmit} className="mt-6 grid gap-4">
-                            <input
-                                value={form.student_name}
-                                onChange={(e) => setForm({ ...form, student_name: e.target.value })}
-                                className="rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
-                                placeholder="Full name"
-                                required
-                            />
-
-                            <input
-                                value={form.phone}
-                                onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                                className="rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
-                                placeholder="Phone number"
-                                required
-                            />
-
-                            <input
-                                type="email"
-                                value={form.email}
-                                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                                className="rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
-                                placeholder="Email optional"
-                            />
-
-                            <select
-                                value={form.college_id}
-                                onChange={(e) => setForm({ ...form, college_id: e.target.value })}
-                                className="rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
-                            >
-                                <option value="">Select college optional</option>
-                                {colleges.map((college) => (
-                                    <option key={college.id} value={college.id}>
-                                        {college.name}
-                                    </option>
-                                ))}
-                            </select>
-
-                            <div className="grid gap-4 sm:grid-cols-2">
-                                <input
-                                    value={form.course}
-                                    onChange={(e) => setForm({ ...form, course: e.target.value })}
-                                    className="rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
-                                    placeholder="Course"
-                                />
-
-                                <input
-                                    value={form.year}
-                                    onChange={(e) => setForm({ ...form, year: e.target.value })}
-                                    className="rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
-                                    placeholder="Year / semester"
-                                />
-                            </div>
-
-                            <div className="grid gap-4 sm:grid-cols-2">
-                                <input
-                                    value={form.city}
-                                    onChange={(e) => setForm({ ...form, city: e.target.value })}
-                                    className="rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
-                                    placeholder="City"
-                                />
-
-                                <select
-                                    value={form.interest}
-                                    onChange={(e) => setForm({ ...form, interest: e.target.value })}
-                                    className="rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
-                                >
-                                    <option>Internship</option>
-                                    <option>Job</option>
-                                    <option>Workshop</option>
-                                    <option>Event</option>
-                                    <option>Hackathon</option>
-                                    <option>Startup Exposure</option>
-                                </select>
-                            </div>
-
-                            {campaign.form_type === 'internship_form' && (
-                                <>
-                                    <textarea
-                                        value={form.skills}
-                                        onChange={(e) => setForm({ ...form, skills: e.target.value })}
-                                        className="min-h-20 rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
-                                        placeholder="Skills"
-                                    />
-
-                                    <input
-                                        value={form.resume_link}
-                                        onChange={(e) => setForm({ ...form, resume_link: e.target.value })}
-                                        className="rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
-                                        placeholder="Resume link optional"
-                                    />
-                                </>
-                            )}
-
-                            {campaign.form_type === 'event_form' && (
-                                <input
-                                    value={form.team_name}
-                                    onChange={(e) => setForm({ ...form, team_name: e.target.value })}
-                                    className="rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
-                                    placeholder="Team name optional"
-                                />
-                            )}
-
-                            {campaign.form_type === 'feedback_form' && (
-                                <>
-                                    <select
-                                        value={form.rating}
-                                        onChange={(e) => setForm({ ...form, rating: e.target.value })}
-                                        className="rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
-                                        required
-                                    >
-                                        <option value="">Rating</option>
-                                        <option value="5">5 - Excellent</option>
-                                        <option value="4">4 - Good</option>
-                                        <option value="3">3 - Average</option>
-                                        <option value="2">2 - Poor</option>
-                                        <option value="1">1 - Bad</option>
-                                    </select>
-
-                                    <textarea
-                                        value={form.feedback}
-                                        onChange={(e) => setForm({ ...form, feedback: e.target.value })}
-                                        className="min-h-24 rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
-                                        placeholder="Your feedback"
-                                        required
-                                    />
-                                </>
-                            )}
-
-                            {campaign.form_type === 'ambassador_application_form' && (
-                                <textarea
-                                    value={form.why_join}
-                                    onChange={(e) => setForm({ ...form, why_join: e.target.value })}
-                                    className="min-h-24 rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
-                                    placeholder="Why do you want to join as a Frint ambassador?"
-                                    required
-                                />
-                            )}
-
-                            <button
-                                type="submit"
-                                disabled={saving}
-                                className="frint-primary-btn mt-2 px-5 py-3 text-sm disabled:opacity-60"
-                            >
-                                {saving ? 'Submitting...' : 'Submit'}
-                            </button>
-                        </form>
-                    </section>
-                </div>
-            </div>
-        </main>
+                        <button
+                            type="submit"
+                            disabled={submitting}
+                            className="frint-primary-btn flex w-full items-center justify-center gap-2 px-5 py-3 text-sm disabled:opacity-60"
+                        >
+                            {submitting ? 'Submitting...' : 'Submit'}
+                            {!submitting && <ArrowRight size={17} />}
+                        </button>
+                    </form>
+                </section>
+            </main>
+        </div>
     )
 }
