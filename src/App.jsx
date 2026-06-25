@@ -20,6 +20,7 @@ import Proofs from './pages/admin/Proofs'
 import MyTasks from './pages/ambassador/MyTasks'
 import Leaderboard from './pages/Leaderboard'
 import Reports from './pages/admin/Reports'
+import SuspendedAccount from './pages/SuspendedAccount'
 
 function getIntroKey(pathname) {
   if (pathname.startsWith('/c/')) {
@@ -135,6 +136,14 @@ function AppGate() {
   const role = profile?.role
   const isAdmin = session && role === 'admin'
   const isAmbassador = session && role === 'ambassador'
+
+  const isPublicPage =
+    location.pathname.startsWith('/c/') ||
+    location.pathname.startsWith('/thank-you')
+
+  if (session && profile && profile.status !== 'active' && !isPublicPage) {
+    return <SuspendedAccount />
+  }
 
   return (
     <Routes>

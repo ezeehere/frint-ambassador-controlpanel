@@ -26,3 +26,29 @@ export async function createAmbassadorAccount(payload) {
 
     return data
 }
+export async function updateAmbassadorAccount(payload) {
+    const {
+        data: { session },
+    } = await supabase.auth.getSession()
+
+    if (!session?.access_token) {
+        throw new Error('Admin session not found.')
+    }
+
+    const response = await fetch('/api/update-ambassador', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify(payload),
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+        throw new Error(data.error || 'Failed to update ambassador.')
+    }
+
+    return data
+}

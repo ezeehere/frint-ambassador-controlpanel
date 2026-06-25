@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, Fragment } from 'react'
 import { RefreshCw, Search, UserCheck } from 'lucide-react'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import StatusBadge from '../../components/ui/StatusBadge'
 import EmptyState from '../../components/ui/EmptyState'
 import { supabase } from '../../lib/supabase'
 import CreateAmbassadorBox from '../../components/admin/CreateAmbassadorBox'
+import AmbassadorAccountActions from '../../components/admin/AmbassadorAccountActions'
 
 export default function Ambassadors() {
     const [profiles, setProfiles] = useState([])
@@ -183,82 +184,94 @@ export default function Ambassadors() {
                                         const saving = savingId === profile.id
 
                                         return (
-                                            <tr key={profile.id} className="border-b frint-border last:border-b-0">
-                                                <td className="px-4 py-4">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-[#0060f8]">
-                                                            <UserCheck size={20} />
+                                            <Fragment key={profile.id}>
+                                                <tr className="border-b frint-border">
+                                                    <td className="px-4 py-4">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-[#0060f8]">
+                                                                <UserCheck size={20} />
+                                                            </div>
+
+                                                            <div>
+                                                                <p className="font-black text-[var(--frint-text)]">
+                                                                    {profile.full_name || 'Unnamed user'}
+                                                                </p>
+                                                                <p className="mt-1 text-sm frint-muted">
+                                                                    {profile.email}
+                                                                </p>
+                                                            </div>
                                                         </div>
+                                                    </td>
 
-                                                        <div>
-                                                            <p className="font-black text-[var(--frint-text)]">
-                                                                {profile.full_name || 'Unnamed user'}
-                                                            </p>
-                                                            <p className="mt-1 text-sm frint-muted">
-                                                                {profile.email}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                </td>
+                                                    <td className="px-4 py-4">
+                                                        <select
+                                                            value={profile.role || ''}
+                                                            onChange={(e) =>
+                                                                updateProfile(profile.id, {
+                                                                    role: e.target.value || null,
+                                                                })
+                                                            }
+                                                            className="rounded-2xl border frint-border bg-[var(--frint-card)] px-3 py-2 text-sm font-bold outline-none"
+                                                            disabled={saving}
+                                                        >
+                                                            <option value="">No role</option>
+                                                            <option value="admin">Admin</option>
+                                                            <option value="ambassador">Ambassador</option>
+                                                        </select>
+                                                    </td>
 
-                                                <td className="px-4 py-4">
-                                                    <select
-                                                        value={profile.role || ''}
-                                                        onChange={(e) =>
-                                                            updateProfile(profile.id, {
-                                                                role: e.target.value || null,
-                                                            })
-                                                        }
-                                                        className="rounded-2xl border frint-border bg-[var(--frint-card)] px-3 py-2 text-sm font-bold outline-none"
-                                                        disabled={saving}
-                                                    >
-                                                        <option value="">No role</option>
-                                                        <option value="admin">Admin</option>
-                                                        <option value="ambassador">Ambassador</option>
-                                                    </select>
-                                                </td>
+                                                    <td className="px-4 py-4">
+                                                        <select
+                                                            value={profile.college_id || ''}
+                                                            onChange={(e) =>
+                                                                updateProfile(profile.id, {
+                                                                    college_id: e.target.value || null,
+                                                                })
+                                                            }
+                                                            className="max-w-[260px] rounded-2xl border frint-border bg-[var(--frint-card)] px-3 py-2 text-sm font-bold outline-none"
+                                                            disabled={saving}
+                                                        >
+                                                            <option value="">No college</option>
+                                                            {colleges.map((college) => (
+                                                                <option key={college.id} value={college.id}>
+                                                                    {college.name}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    </td>
 
-                                                <td className="px-4 py-4">
-                                                    <select
-                                                        value={profile.college_id || ''}
-                                                        onChange={(e) =>
-                                                            updateProfile(profile.id, {
-                                                                college_id: e.target.value || null,
-                                                            })
-                                                        }
-                                                        className="max-w-[260px] rounded-2xl border frint-border bg-[var(--frint-card)] px-3 py-2 text-sm font-bold outline-none"
-                                                        disabled={saving}
-                                                    >
-                                                        <option value="">No college</option>
-                                                        {colleges.map((college) => (
-                                                            <option key={college.id} value={college.id}>
-                                                                {college.name}
-                                                            </option>
-                                                        ))}
-                                                    </select>
-                                                </td>
+                                                    <td className="px-4 py-4">
+                                                        <StatusBadge status={profile.status} />
+                                                    </td>
 
-                                                <td className="px-4 py-4">
-                                                    <StatusBadge status={profile.status} />
-                                                </td>
-
-                                                <td className="px-4 py-4">
-                                                    <select
-                                                        value={profile.status || 'pending'}
-                                                        onChange={(e) =>
-                                                            updateProfile(profile.id, {
-                                                                status: e.target.value,
-                                                            })
-                                                        }
-                                                        className="rounded-2xl border frint-border bg-[var(--frint-card)] px-3 py-2 text-sm font-bold outline-none"
-                                                        disabled={saving}
-                                                    >
-                                                        <option value="pending">Pending</option>
-                                                        <option value="active">Active</option>
-                                                        <option value="suspended">Suspended</option>
-                                                    </select>
-                                                </td>
-                                            </tr>
+                                                    <td className="px-4 py-4">
+                                                        <select
+                                                            value={profile.status || 'pending'}
+                                                            onChange={(e) =>
+                                                                updateProfile(profile.id, {
+                                                                    status: e.target.value,
+                                                                })
+                                                            }
+                                                            className="rounded-2xl border frint-border bg-[var(--frint-card)] px-3 py-2 text-sm font-bold outline-none"
+                                                            disabled={saving}
+                                                        >
+                                                            <option value="pending">Pending</option>
+                                                            <option value="active">Active</option>
+                                                            <option value="suspended">Suspended</option>
+                                                        </select>
+                                                    </td>
+                                                </tr>
+                                                {profile.role === 'ambassador' && (
+                                                    <tr className="border-b frint-border bg-[var(--frint-soft-card)]/30">
+                                                        <td colSpan={5} className="px-4 pb-4 pt-1">
+                                                            <AmbassadorAccountActions
+                                                                ambassador={profile}
+                                                                onUpdated={loadData}
+                                                            />
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </Fragment>
                                         )
                                     })}
                                 </tbody>
