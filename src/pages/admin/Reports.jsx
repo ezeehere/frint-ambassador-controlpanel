@@ -33,6 +33,8 @@ export default function Reports() {
         interest,
         status,
         created_at,
+        form_type,
+        raw_answers,
         campaigns (
           id,
           title,
@@ -114,6 +116,7 @@ export default function Reports() {
             'Campaign Type',
             'Ambassador',
             'Status',
+            'Custom Answers',
             'Created At',
         ]
 
@@ -130,6 +133,11 @@ export default function Reports() {
             lead.campaigns?.type || '',
             lead.profiles?.full_name || lead.profiles?.email || '',
             lead.status || '',
+            lead.raw_answers?.custom_answers
+                ? Object.entries(lead.raw_answers.custom_answers)
+                    .map(([key, value]) => `${key.replaceAll('_', ' ')}: ${String(value)}`)
+                    .join(' | ')
+                : '',
             lead.created_at || '',
         ])
 
