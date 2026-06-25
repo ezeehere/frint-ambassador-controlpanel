@@ -138,6 +138,8 @@ export default function Campaigns() {
     const [selectedAmbassadors, setSelectedAmbassadors] = useState([])
     const [form, setForm] = useState(initialForm)
     const [search, setSearch] = useState('')
+    const [assignmentDrafts, setAssignmentDrafts] = useState({})
+    const [assigningCampaignId, setAssigningCampaignId] = useState(null)
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
     const [message, setMessage] = useState('')
@@ -220,6 +222,73 @@ export default function Campaigns() {
 
     const getAmbassadorById = (id) => {
         return ambassadors.find((item) => item.id === id)
+    }
+
+    const getUnassignedAmbassadors = (campaignId) => {
+        const campaignAssignments = getCampaignAssignments(campaignId)
+        const assignedIds = campaignAssignments.map((item) => item.ambassador_id)
+
+        return ambassadors.filter((ambassador) => !assignedIds.includes(ambassador.id))
+    }
+
+    const updateAssignmentDraft = (campaignId, patch) => {
+        setAssignmentDrafts((current) => ({
+            ...current,
+            [campaignId]: {
+                ambassador_id: '',
+                target_count: 50,
+                deadline: '',
+                ...(current[campaignId] || {}),
+                ...patch,
+            },
+        }))
+    }
+
+    const assignAmbassadorToCampaign = async (campaign) => {
+        const draft = assignmentDrafts[campaign.id] || {}
+
+        if (!draft.ambassador_id) {
+            setMessage('Please select an ambassador.')
+            return
+        }
+
+        setAssigningCampaignId(campaign.id)
+        setMessage('')
+
+        const ambassador = getAmbassadorById(draft.ambassador_id)
+        const namePart = slugify(ambassador?.full_name || ambassador?.email || 'ambassador')
+
+        const result = await supabase
+            .from('ambassador_campaigns')
+            .insert({
+                ambassador_id: draft.ambassador_id,
+                campaign_id: campaign.id,
+                ref_code: `${campaign.slug}-${namePart}-${shortCode()}`,
+                status: 'active',
+                target_count: Number(draft.target_count) || 0,
+                deadline: draft.deadline || campaign.end_date || null,
+                points_per_lead: Number(campaign.points_per_lead) || 0,
+                points_per_conversion: Number(campaign.points_per_conversion) || 0,
+                notes: null,
+            })
+
+        if (result.error) {
+            setMessage(result.error.message)
+            setAssigningCampaignId(null)
+            return
+        }
+
+        setAssignmentDrafts((current) => ({
+            ...current,
+            [campaign.id]: {
+                ambassador_id: '',
+                target_count: 50,
+                deadline: '',
+            },
+        }))
+
+        await loadData()
+        setAssigningCampaignId(null)
     }
 
     const toggleAmbassador = (ambassadorId) => {
@@ -784,6 +853,81 @@ export default function Campaigns() {
                                                 style={{ width: `${Math.min(progressPercent, 100)}%` }}
                                             />
                                         </div>
+
+                                        {(() => {
+                                            const unassignedAmbassadors = getUnassignedAmbassadors(campaign.id)
+                                            const draft = assignmentDrafts[campaign.id] || {
+                                                ambassador_id: '',
+                                                target_count: 50,
+                                                deadline: '',
+                                            }
+
+                                            return (
+                                                <div className="mb-4 rounded-[20px] border frint-border bg-[var(--frint-card)] p-4">
+                                                    <p className="mb-3 text-sm font-black text-[var(--frint-text)]">
+                                                        Add ambassador
+                                                    </p>
+
+                                                    {unassignedAmbassadors.length === 0 ? (
+                                                        <p className="text-sm font-bold frint-muted">
+                                                            All active ambassadors are already assigned to this campaign.
+                                                        </p>
+                                                    ) : (
+                                                        <div className="grid gap-3 lg:grid-cols-[1.2fr_0.7fr_0.8fr_auto]">
+                                                            <select
+                                                                value={draft.ambassador_id}
+                                                                onChange={(e) =>
+                                                                    updateAssignmentDraft(campaign.id, {
+                                                                        ambassador_id: e.target.value,
+                                                                    })
+                                                                }
+                                                                className="rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
+                                                            >
+                                                                <option value="">Select ambassador</option>
+                                                                {unassignedAmbassadors.map((ambassador) => (
+                                                                    <option key={ambassador.id} value={ambassador.id}>
+                                                                        {ambassador.full_name || ambassador.email}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+
+                                                            <input
+                                                                type="number"
+                                                                min="0"
+                                                                value={draft.target_count}
+                                                                onChange={(e) =>
+                                                                    updateAssignmentDraft(campaign.id, {
+                                                                        target_count: e.target.value,
+                                                                    })
+                                                                }
+                                                                className="rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
+                                                                placeholder="Target"
+                                                            />
+
+                                                            <input
+                                                                type="date"
+                                                                value={draft.deadline}
+                                                                onChange={(e) =>
+                                                                    updateAssignmentDraft(campaign.id, {
+                                                                        deadline: e.target.value,
+                                                                    })
+                                                                }
+                                                                className="rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
+                                                            />
+
+                                                            <button
+                                                                type="button"
+                                                                disabled={assigningCampaignId === campaign.id}
+                                                                onClick={() => assignAmbassadorToCampaign(campaign)}
+                                                                className="frint-primary-btn px-5 py-3 text-sm disabled:opacity-60"
+                                                            >
+                                                                {assigningCampaignId === campaign.id ? 'Adding...' : 'Add'}
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )
+                                        })()}
 
                                         <div className="mt-5 rounded-[22px] bg-[var(--frint-soft-card)] p-4">
                                             <p className="mb-3 text-sm font-black text-[var(--frint-text)]">

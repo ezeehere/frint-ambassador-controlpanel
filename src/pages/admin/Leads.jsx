@@ -5,6 +5,46 @@ import StatusBadge from '../../components/ui/StatusBadge'
 import EmptyState from '../../components/ui/EmptyState'
 import { supabase } from '../../lib/supabase'
 
+function getCustomAnswers(lead) {
+    const answers = lead?.raw_answers?.custom_answers
+
+    if (!answers || typeof answers !== 'object' || Array.isArray(answers)) {
+        return {}
+    }
+
+    return answers
+}
+
+function formatKey(key) {
+    return String(key || '')
+        .replaceAll('_', ' ')
+        .replace(/\b\w/g, (letter) => letter.toUpperCase())
+}
+
+function formatValue(value) {
+    if (value === true) return 'Yes'
+    if (value === false) return 'No'
+    if (value === null || value === undefined || value === '') return 'Not answered'
+
+    if (Array.isArray(value)) {
+        return value.join(', ')
+    }
+
+    if (typeof value === 'object') {
+        return JSON.stringify(value)
+    }
+
+    return String(value)
+}
+
+function formatCustomAnswers(lead) {
+    const answers = getCustomAnswers(lead)
+
+    return Object.entries(answers)
+        .map(([key, value]) => `${formatKey(key)}: ${formatValue(value)}`)
+        .join(' | ')
+}
+
 export default function Leads() {
     const [leads, setLeads] = useState([])
     const [search, setSearch] = useState('')
@@ -32,7 +72,8 @@ export default function Leads() {
                 created_at,
                 campaigns (
                     id,
-                    title
+                    title,
+                    type
                 ),
                 profiles (
                     id,
@@ -44,7 +85,7 @@ export default function Leads() {
                     name,
                     city
                 )
-                `)
+            `)
             .order('created_at', { ascending: false })
 
         if (result.error) {
@@ -67,18 +108,25 @@ export default function Leads() {
         if (!value) return leads
 
         return leads.filter((lead) => {
+            const customText = formatCustomAnswers(lead).toLowerCase()
+
             return (
                 lead.student_name?.toLowerCase().includes(value) ||
                 lead.phone?.toLowerCase().includes(value) ||
                 lead.email?.toLowerCase().includes(value) ||
                 lead.campaigns?.title?.toLowerCase().includes(value) ||
                 lead.profiles?.full_name?.toLowerCase().includes(value) ||
-                lead.colleges?.name?.toLowerCase().includes(value)
+                lead.profiles?.email?.toLowerCase().includes(value) ||
+                lead.colleges?.name?.toLowerCase().includes(value) ||
+                lead.interest?.toLowerCase().includes(value) ||
+                customText.includes(value)
             )
         })
     }, [leads, search])
 
     const updateLeadStatus = async (leadId, status) => {
+        setMessage('')
+
         const result = await supabase
             .from('leads')
             .update({ status })
@@ -103,8 +151,10 @@ export default function Leads() {
             'City',
             'Interest',
             'Campaign',
+            'Campaign Type',
             'Ambassador',
             'Status',
+            'Custom Answers',
             'Created At',
         ]
 
@@ -118,8 +168,10 @@ export default function Leads() {
             lead.city || '',
             lead.interest || '',
             lead.campaigns?.title || '',
+            lead.campaigns?.type || '',
             lead.profiles?.full_name || lead.profiles?.email || '',
             lead.status || '',
+            formatCustomAnswers(lead),
             lead.created_at || '',
         ])
 
@@ -171,6 +223,7 @@ export default function Leads() {
                         </div>
 
                         <button
+                            type="button"
                             onClick={exportCsv}
                             className="frint-secondary-btn flex items-center justify-center gap-2 px-5 py-2.5 text-sm"
                         >
@@ -179,6 +232,7 @@ export default function Leads() {
                         </button>
 
                         <button
+                            type="button"
                             onClick={loadLeads}
                             className="frint-secondary-btn flex items-center justify-center gap-2 px-5 py-2.5 text-sm"
                         >
@@ -208,91 +262,129 @@ export default function Leads() {
                         </div>
                     ) : (
                         <div className="overflow-x-auto">
-                            <table className="min-w-[1100px] w-full text-left">
+                            <table className="min-w-[1250px] w-full text-left">
                                 <thead className="border-b frint-border bg-[var(--frint-soft-card)]">
                                     <tr>
                                         <th className="px-4 py-4 text-xs font-black uppercase frint-muted">Student</th>
                                         <th className="px-4 py-4 text-xs font-black uppercase frint-muted">Campaign</th>
                                         <th className="px-4 py-4 text-xs font-black uppercase frint-muted">Ambassador</th>
                                         <th className="px-4 py-4 text-xs font-black uppercase frint-muted">College</th>
-                                        <th className="px-4 py-4 text-xs font-black uppercase frint-muted">Interest</th>
+                                        <th className="px-4 py-4 text-xs font-black uppercase frint-muted">Details</th>
                                         <th className="px-4 py-4 text-xs font-black uppercase frint-muted">Status</th>
                                         <th className="px-4 py-4 text-xs font-black uppercase frint-muted">Update</th>
                                     </tr>
                                 </thead>
 
                                 <tbody>
-                                    {filteredLeads.map((lead) => (
-                                        <tr key={lead.id} className="border-b frint-border last:border-b-0">
-                                            <td className="px-4 py-4">
-                                                <p className="font-black text-[var(--frint-text)]">
-                                                    {lead.student_name}
-                                                </p>
-                                                <p className="mt-1 text-sm frint-muted">
-                                                    {lead.phone}
-                                                </p>
-                                                {lead.email && (
-                                                    <p className="mt-1 text-sm frint-muted">
-                                                        {lead.email}
-                                                    </p>
-                                                )}
+                                    {filteredLeads.map((lead) => {
+                                        const customAnswers = getCustomAnswers(lead)
+                                        const hasCustomAnswers = Object.keys(customAnswers).length > 0
 
-                                                {lead.form_type === 'custom_form' &&
-                                                    lead.raw_answers?.custom_answers &&
-                                                    Object.keys(lead.raw_answers.custom_answers).length > 0 && (
+                                        return (
+                                            <tr key={lead.id} className="border-b frint-border align-top last:border-b-0">
+                                                <td className="px-4 py-4">
+                                                    <p className="font-black text-[var(--frint-text)]">
+                                                        {lead.student_name || 'Unnamed'}
+                                                    </p>
+
+                                                    <p className="mt-1 text-sm frint-muted">
+                                                        {lead.phone || 'No phone'}
+                                                    </p>
+
+                                                    {lead.email && (
+                                                        <p className="mt-1 text-sm frint-muted">
+                                                            {lead.email}
+                                                        </p>
+                                                    )}
+                                                </td>
+
+                                                <td className="px-4 py-4 text-sm font-bold frint-muted">
+                                                    {lead.campaigns?.title || 'Unknown'}
+                                                </td>
+
+                                                <td className="px-4 py-4 text-sm font-bold frint-muted">
+                                                    {lead.profiles?.full_name || lead.profiles?.email || 'Unknown'}
+                                                </td>
+
+                                                <td className="px-4 py-4 text-sm font-bold frint-muted">
+                                                    {lead.colleges?.name || 'Not selected'}
+                                                </td>
+
+                                                <td className="px-4 py-4">
+                                                    <div className="space-y-1 text-sm font-bold frint-muted">
+                                                        {lead.interest && (
+                                                            <p>
+                                                                <span className="font-black text-[var(--frint-text)]">Interest:</span>{' '}
+                                                                {lead.interest}
+                                                            </p>
+                                                        )}
+
+                                                        {lead.course && (
+                                                            <p>
+                                                                <span className="font-black text-[var(--frint-text)]">Course:</span>{' '}
+                                                                {lead.course}
+                                                            </p>
+                                                        )}
+
+                                                        {lead.year && (
+                                                            <p>
+                                                                <span className="font-black text-[var(--frint-text)]">Year:</span>{' '}
+                                                                {lead.year}
+                                                            </p>
+                                                        )}
+
+                                                        {lead.city && (
+                                                            <p>
+                                                                <span className="font-black text-[var(--frint-text)]">City:</span>{' '}
+                                                                {lead.city}
+                                                            </p>
+                                                        )}
+
+                                                        {!lead.interest && !lead.course && !lead.year && !lead.city && !hasCustomAnswers && (
+                                                            <p>Not added</p>
+                                                        )}
+                                                    </div>
+
+                                                    {hasCustomAnswers && (
                                                         <div className="mt-3 rounded-[18px] bg-[var(--frint-soft-card)] p-3">
                                                             <p className="mb-2 text-xs font-black uppercase tracking-wide frint-muted">
                                                                 Custom answers
                                                             </p>
 
                                                             <div className="space-y-1">
-                                                                {Object.entries(lead.raw_answers.custom_answers).map(([key, value]) => (
+                                                                {Object.entries(customAnswers).map(([key, value]) => (
                                                                     <p key={key} className="text-sm font-bold frint-muted">
-                                                                        <span className="font-black capitalize text-[var(--frint-text)]">
-                                                                            {key.replaceAll('_', ' ')}:
+                                                                        <span className="font-black text-[var(--frint-text)]">
+                                                                            {formatKey(key)}:
                                                                         </span>{' '}
-                                                                        {String(value)}
+                                                                        {formatValue(value)}
                                                                     </p>
                                                                 ))}
                                                             </div>
                                                         </div>
                                                     )}
-                                            </td>
+                                                </td>
 
-                                            <td className="px-4 py-4 text-sm font-bold frint-muted">
-                                                {lead.campaigns?.title || 'Unknown'}
-                                            </td>
+                                                <td className="px-4 py-4">
+                                                    <StatusBadge status={lead.status} />
+                                                </td>
 
-                                            <td className="px-4 py-4 text-sm font-bold frint-muted">
-                                                {lead.profiles?.full_name || lead.profiles?.email || 'Unknown'}
-                                            </td>
-
-                                            <td className="px-4 py-4 text-sm font-bold frint-muted">
-                                                {lead.colleges?.name || 'Not selected'}
-                                            </td>
-
-                                            <td className="px-4 py-4 text-sm font-bold frint-muted">
-                                                {lead.interest || 'Not added'}
-                                            </td>
-
-                                            <td className="px-4 py-4">
-                                                <StatusBadge status={lead.status} />
-                                            </td>
-
-                                            <td className="px-4 py-4">
-                                                <select
-                                                    value={lead.status}
-                                                    onChange={(e) => updateLeadStatus(lead.id, e.target.value)}
-                                                    className="rounded-2xl border frint-border bg-[var(--frint-card)] px-3 py-2 text-sm font-bold outline-none"
-                                                >
-                                                    <option value="new">New</option>
-                                                    <option value="contacted">Contacted</option>
-                                                    <option value="registered">Registered</option>
-                                                    <option value="converted">Converted</option>
-                                                    <option value="rejected">Rejected</option>
-                                                </select>
-                                        </tr>
-                                    ))}
+                                                <td className="px-4 py-4">
+                                                    <select
+                                                        value={lead.status || 'new'}
+                                                        onChange={(e) => updateLeadStatus(lead.id, e.target.value)}
+                                                        className="rounded-2xl border frint-border bg-[var(--frint-card)] px-3 py-2 text-sm font-bold outline-none"
+                                                    >
+                                                        <option value="new">New</option>
+                                                        <option value="contacted">Contacted</option>
+                                                        <option value="registered">Registered</option>
+                                                        <option value="converted">Converted</option>
+                                                        <option value="rejected">Rejected</option>
+                                                    </select>
+                                                </td>
+                                            </tr>
+                                        )
+                                    })}
                                 </tbody>
                             </table>
                         </div>
