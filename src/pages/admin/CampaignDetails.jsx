@@ -15,6 +15,7 @@ import DashboardLayout from '../../components/layout/DashboardLayout'
 import StatusBadge from '../../components/ui/StatusBadge'
 import EmptyState from '../../components/ui/EmptyState'
 import { supabase } from '../../lib/supabase'
+import CampaignSettingsEditor from '../../components/admin/CampaignSettingsEditor'
 
 function slugify(text = '') {
     return text
@@ -589,6 +590,13 @@ export default function CampaignDetails() {
                         </p>
                     )}
                 </section>
+            </div>
+
+            <div className="mt-6">
+                <CampaignSettingsEditor
+                    campaign={campaign}
+                    onUpdated={loadData}
+                />
             </div>
 
             <section className="frint-card mt-6 rounded-[30px] p-6">

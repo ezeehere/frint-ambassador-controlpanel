@@ -796,14 +796,17 @@ export default function Campaigns() {
                                                     <span className="rounded-full bg-[var(--frint-soft-card)] px-3 py-1 text-xs font-black frint-muted">
                                                         {getLabel(audienceTypes, campaign.audience_type)}
                                                     </span>
+
                                                     <span className="rounded-full bg-[var(--frint-soft-card)] px-3 py-1 text-xs font-black frint-muted">
                                                         {getLabel(formTypes, campaign.form_type)}
                                                     </span>
+
                                                     <span className="rounded-full bg-[var(--frint-soft-card)] px-3 py-1 text-xs font-black frint-muted">
                                                         {campaign.priority}
                                                     </span>
                                                 </div>
                                             </div>
+
                                             <div className="flex flex-col gap-2 sm:flex-row">
                                                 <Link
                                                     to={`/admin/campaigns/${campaign.id}`}
@@ -831,6 +834,7 @@ export default function Campaigns() {
                                                     <Target size={17} />
                                                     <p className="text-sm font-black">Progress</p>
                                                 </div>
+
                                                 <p className="mt-2 text-2xl font-black text-[var(--frint-text)]">
                                                     {progress?.total_leads || 0}/{campaign.target_count || 0}
                                                 </p>
@@ -841,6 +845,7 @@ export default function Campaigns() {
                                                     <Users size={17} />
                                                     <p className="text-sm font-black">Assigned</p>
                                                 </div>
+
                                                 <p className="mt-2 text-2xl font-black text-[var(--frint-text)]">
                                                     {campaignAssignments.length}
                                                 </p>
@@ -850,6 +855,7 @@ export default function Campaigns() {
                                                 <p className="text-sm font-black frint-muted">
                                                     Converted
                                                 </p>
+
                                                 <p className="mt-2 text-2xl font-black text-[var(--frint-text)]">
                                                     {progress?.converted_leads || 0}
                                                 </p>
@@ -861,124 +867,6 @@ export default function Campaigns() {
                                                 className="h-full rounded-full bg-[#0060f8]"
                                                 style={{ width: `${Math.min(progressPercent, 100)}%` }}
                                             />
-                                        </div>
-
-                                        {(() => {
-                                            const unassignedAmbassadors = getUnassignedAmbassadors(campaign.id)
-                                            const draft = assignmentDrafts[campaign.id] || {
-                                                ambassador_id: '',
-                                                target_count: 50,
-                                                deadline: '',
-                                            }
-
-                                            return (
-                                                <div className="mb-4 rounded-[20px] border frint-border bg-[var(--frint-card)] p-4">
-                                                    <p className="mb-3 text-sm font-black text-[var(--frint-text)]">
-                                                        Add ambassador
-                                                    </p>
-
-                                                    {unassignedAmbassadors.length === 0 ? (
-                                                        <p className="text-sm font-bold frint-muted">
-                                                            All active ambassadors are already assigned to this campaign.
-                                                        </p>
-                                                    ) : (
-                                                        <div className="grid gap-3 lg:grid-cols-[1.2fr_0.7fr_0.8fr_auto]">
-                                                            <select
-                                                                value={draft.ambassador_id}
-                                                                onChange={(e) =>
-                                                                    updateAssignmentDraft(campaign.id, {
-                                                                        ambassador_id: e.target.value,
-                                                                    })
-                                                                }
-                                                                className="rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
-                                                            >
-                                                                <option value="">Select ambassador</option>
-                                                                {unassignedAmbassadors.map((ambassador) => (
-                                                                    <option key={ambassador.id} value={ambassador.id}>
-                                                                        {ambassador.full_name || ambassador.email}
-                                                                    </option>
-                                                                ))}
-                                                            </select>
-
-                                                            <input
-                                                                type="number"
-                                                                min="0"
-                                                                value={draft.target_count}
-                                                                onChange={(e) =>
-                                                                    updateAssignmentDraft(campaign.id, {
-                                                                        target_count: e.target.value,
-                                                                    })
-                                                                }
-                                                                className="rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
-                                                                placeholder="Target"
-                                                            />
-
-                                                            <input
-                                                                type="date"
-                                                                value={draft.deadline}
-                                                                onChange={(e) =>
-                                                                    updateAssignmentDraft(campaign.id, {
-                                                                        deadline: e.target.value,
-                                                                    })
-                                                                }
-                                                                className="rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
-                                                            />
-
-                                                            <button
-                                                                type="button"
-                                                                disabled={assigningCampaignId === campaign.id}
-                                                                onClick={() => assignAmbassadorToCampaign(campaign)}
-                                                                className="frint-primary-btn px-5 py-3 text-sm disabled:opacity-60"
-                                                            >
-                                                                {assigningCampaignId === campaign.id ? 'Adding...' : 'Add'}
-                                                            </button>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            )
-                                        })()}
-
-                                        <div className="mt-5 rounded-[22px] bg-[var(--frint-soft-card)] p-4">
-                                            <p className="mb-3 text-sm font-black text-[var(--frint-text)]">
-                                                Referral links
-                                            </p>
-
-                                            {campaignAssignments.length === 0 ? (
-                                                <p className="text-sm font-bold frint-muted">
-                                                    No ambassadors assigned.
-                                                </p>
-                                            ) : (
-                                                <div className="space-y-2">
-                                                    {campaignAssignments.map((assignment) => {
-                                                        const ambassador = getAmbassadorById(assignment.ambassador_id)
-                                                        const link = `${window.location.origin}/c/${assignment.ref_code}`
-
-                                                        return (
-                                                            <div
-                                                                key={assignment.id}
-                                                                className="flex flex-col gap-3 rounded-2xl bg-[var(--frint-card)] px-4 py-3 lg:flex-row lg:items-center lg:justify-between"
-                                                            >
-                                                                <div className="min-w-0">
-                                                                    <p className="font-black text-[var(--frint-text)]">
-                                                                        {ambassador?.full_name || ambassador?.email || 'Ambassador'}
-                                                                    </p>
-                                                                    <p className="truncate text-sm frint-muted">
-                                                                        Target {assignment.target_count || 0} • {link}
-                                                                    </p>
-                                                                </div>
-
-                                                                <button
-                                                                    onClick={() => copyReferralLink(assignment.ref_code)}
-                                                                    className="frint-secondary-btn flex items-center justify-center gap-2 px-4 py-2 text-sm"
-                                                                >
-                                                                    <Link2 size={15} />
-                                                                    Copy
-                                                                </button>
-                                                            </div>
-                                                        )
-                                                    })}
-                                                </div>
-                                            )}
                                         </div>
                                     </div>
                                 )
