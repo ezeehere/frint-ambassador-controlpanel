@@ -1,0 +1,124 @@
+@import "tailwindcss";
+
+:root {
+  --frint-blue: #0060f8;
+  --frint-sky: #70c0f8;
+
+  --frint-bg: #f5f8fc;
+  --frint-card: #ffffff;
+  --frint-soft-card: #f8fbff;
+  --frint-text: #0b1220;
+  --frint-muted: #64748b;
+  --frint-border: #dde7f3;
+  --frint-input: #ffffff;
+  --frint-hover: #eef5ff;
+}
+
+[data-theme='dark'] {
+  --frint-bg: #05070b;
+  --frint-card: #111111;
+  --frint-soft-card: #171717;
+  --frint-text: #ffffff;
+  --frint-muted: #9ca3af;
+  --frint-border: #2a2a2a;
+  --frint-input: #202020;
+  --frint-hover: #1f2937;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--frint-bg);
+  color: var(--frint-text);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+}
+
+.frint-page {
+  min-height: 100vh;
+  background: var(--frint-bg);
+  color: var(--frint-text);
+}
+
+.frint-card {
+  border: 1px solid var(--frint-border);
+  background: var(--frint-card);
+  color: var(--frint-text);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04);
+}
+
+.frint-soft-card {
+  border: 1px solid var(--frint-border);
+  background: var(--frint-soft-card);
+  color: var(--frint-text);
+}
+
+.frint-muted {
+  color: var(--frint-muted);
+}
+
+.frint-border {
+  border-color: var(--frint-border);
+}
+
+.frint-primary-btn {
+  border-radius: 999px;
+  background: var(--frint-blue);
+  color: white;
+  font-weight: 800;
+  transition: 0.2s ease;
+}
+
+.frint-primary-btn:hover {
+  filter: brightness(0.94);
+}
+
+.frint-secondary-btn {
+  border: 1px solid var(--frint-border);
+  border-radius: 999px;
+  background: var(--frint-card);
+  color: var(--frint-text);
+  font-weight: 700;
+  transition: 0.2s ease;
+}
+
+.frint-secondary-btn:hover {
+  background: var(--frint-hover);
+}
+
+.frint-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px;
+  border: 1px solid var(--frint-border);
+  border-radius: 999px;
+  background: var(--frint-card);
+}
+
+.frint-toggle-btn {
+  display: inline-flex;
+  height: 34px;
+  width: 34px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--frint-muted);
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.frint-toggle-btn:hover {
+  background: var(--frint-hover);
+  color: var(--frint-text);
+}
+
+.frint-toggle-btn.active {
+  background: var(--frint-blue);
+  color: white;
+}
