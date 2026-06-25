@@ -1,28 +1,39 @@
 import { useCallback, useEffect, useState } from 'react'
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import {
+  BrowserRouter,
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+} from 'react-router-dom'
+
 import { ThemeProvider } from './context/ThemeContext'
 import { supabase } from './lib/supabase'
+
 import IntroScreen from './components/IntroScreen'
 import Login from './pages/Login'
+import PlaceholderPage from './pages/PlaceholderPage'
+import SuspendedAccount from './pages/SuspendedAccount'
+
+import AdminDashboard from './pages/admin/AdminDashboard'
 import Ambassadors from './pages/admin/Ambassadors'
 import Colleges from './pages/admin/Colleges'
 import Campaigns from './pages/admin/Campaigns'
-import PlaceholderPage from './pages/PlaceholderPage'
 import CampaignDetails from './pages/admin/CampaignDetails'
-import CampaignLeadPage from './pages/public/CampaignLeadPage'
-import ThankYou from './pages/public/ThankYou'
 import Leads from './pages/admin/Leads'
-import AdminDashboard from './pages/admin/AdminDashboard'
+import Tasks from './pages/admin/Tasks'
+import Proofs from './pages/admin/Proofs'
+import Reports from './pages/admin/Reports'
+import Settings from './pages/admin/Settings'
+
 import AmbassadorDashboard from './pages/ambassador/AmbassadorDashboard'
 import MyCampaigns from './pages/ambassador/MyCampaigns'
 import MyLeads from './pages/ambassador/MyLeads'
-import Tasks from './pages/admin/Tasks'
-import Proofs from './pages/admin/Proofs'
 import MyTasks from './pages/ambassador/MyTasks'
+
 import Leaderboard from './pages/Leaderboard'
-import Reports from './pages/admin/Reports'
-import SuspendedAccount from './pages/SuspendedAccount'
-import Settings from './pages/admin/Settings'
+import CampaignLeadPage from './pages/public/CampaignLeadPage'
+import ThankYou from './pages/public/ThankYou'
 
 function getIntroKey(pathname) {
   if (pathname.startsWith('/c/')) {
@@ -32,12 +43,23 @@ function getIntroKey(pathname) {
   return 'frint_intro_seen'
 }
 
+function isPublicPath(pathname) {
+  return pathname.startsWith('/c/') || pathname.startsWith('/thank-you')
+}
+
+function getRoleHome(role) {
+  if (role === 'admin') return '/admin/dashboard'
+  if (role === 'ambassador') return '/ambassador/dashboard'
+
+  return '/login'
+}
+
 function LoadingScreen() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#f5f8fc] px-4">
-      <div className="rounded-3xl border border-[#dde7f3] bg-white px-8 py-6 text-center shadow-sm">
+    <div className="frint-page flex min-h-screen items-center justify-center px-4">
+      <div className="frint-card rounded-3xl px-8 py-6 text-center">
         <img src="/logo.svg" alt="Frint" className="mx-auto h-12" />
-        <p className="mt-4 text-sm font-semibold text-[#64748b]">
+        <p className="mt-4 text-sm font-semibold frint-muted">
           Preparing your panel...
         </p>
       </div>
@@ -45,18 +67,60 @@ function LoadingScreen() {
   )
 }
 
+function AccountNotAssigned() {
+  const logout = async () => {
+    await supabase.auth.signOut()
+    window.location.href = '/login'
+  }
+
+  return (
+    <div className="frint-page flex min-h-screen items-center justify-center px-4">
+      <div className="frint-card max-w-md rounded-3xl p-8 text-center">
+        <img src="/logo.svg" alt="Frint" className="mx-auto h-12" />
+
+        <h1 className="mt-6 text-2xl font-black text-[var(--frint-text)]">
+          Account not assigned
+        </h1>
+
+        <p className="mt-3 text-sm font-bold leading-6 frint-muted">
+          Your login exists, but no role is assigned yet. Ask an admin to assign
+          your account as admin or ambassador.
+        </p>
+
+        <button
+          onClick={logout}
+          className="frint-primary-btn mt-6 w-full px-5 py-3 text-sm"
+        >
+          Logout
+        </button>
+      </div>
+    </div>
+  )
+}
+
+function ProtectedRoute({ allowedRole, role, session, children }) {
+  if (!session) {
+    return <Navigate to="/login" replace />
+  }
+
+  if (role !== allowedRole) {
+    return <Navigate to={getRoleHome(role)} replace />
+  }
+
+  return children
+}
+
 function AppGate() {
   const location = useLocation()
-  const isPublicReferralRoute = location.pathname.startsWith('/c/')
-  const introKey = getIntroKey(location.pathname)
+  const pathname = location.pathname
+
+  const publicPage = isPublicPath(pathname)
+  const publicReferralRoute = pathname.startsWith('/c/')
+  const introKey = getIntroKey(pathname)
 
   const [introDone, setIntroDone] = useState(() => {
     return sessionStorage.getItem(getIntroKey(window.location.pathname)) === 'yes'
   })
-
-  useEffect(() => {
-    setIntroDone(sessionStorage.getItem(introKey) === 'yes')
-  }, [introKey])
 
   const [authLoading, setAuthLoading] = useState(true)
   const [session, setSession] = useState(null)
@@ -91,17 +155,22 @@ function AppGate() {
   }
 
   useEffect(() => {
+    setIntroDone(sessionStorage.getItem(introKey) === 'yes')
+  }, [introKey])
+
+  useEffect(() => {
     let isMounted = true
 
     const initAuth = async () => {
       setAuthLoading(true)
 
       const {
-        data: { session },
+        data: { session: currentSession },
       } = await supabase.auth.getSession()
 
       if (!isMounted) return
-      await loadUserData(session)
+
+      await loadUserData(currentSession)
     }
 
     initAuth()
@@ -110,6 +179,7 @@ function AppGate() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, currentSession) => {
       if (!isMounted) return
+
       setAuthLoading(true)
       loadUserData(currentSession)
     })
@@ -124,9 +194,9 @@ function AppGate() {
     return (
       <IntroScreen
         onFinish={finishIntro}
-        title={isPublicReferralRoute ? 'Welcome to Frint' : 'Ambassador Control Panel'}
-        subtitle={isPublicReferralRoute ? 'Loading your form' : 'Loading your workspace'}
-        footerText={isPublicReferralRoute ? 'Preparing your form' : 'Preparing your panel'}
+        title={publicReferralRoute ? 'Welcome to Frint' : 'Ambassador Control Panel'}
+        subtitle={publicReferralRoute ? 'Loading your form' : 'Loading your workspace'}
+        footerText={publicReferralRoute ? 'Preparing your form' : 'Preparing your panel'}
       />
     )
   }
@@ -136,160 +206,217 @@ function AppGate() {
   }
 
   const role = profile?.role
-  const isAdmin = session && role === 'admin'
-  const isAmbassador = session && role === 'ambassador'
+  const isSuspended = session && profile && profile.status !== 'active'
 
-  const isPublicPage =
-    location.pathname.startsWith('/c/') ||
-    location.pathname.startsWith('/thank-you')
-
-  if (session && profile && profile.status !== 'active' && !isPublicPage) {
+  if (isSuspended && !publicPage) {
     return <SuspendedAccount />
   }
 
   return (
     <Routes>
+      {/* Public routes */}
+      <Route path="/c/:refCode" element={<CampaignLeadPage />} />
+      <Route path="/thank-you" element={<ThankYou />} />
+
+      {/* Auth */}
       <Route
         path="/login"
-        element={!session ? <Login /> : <Navigate to="/" replace />}
+        element={
+          !session ? (
+            <Login />
+          ) : (
+            <Navigate to={getRoleHome(role)} replace />
+          )
+        }
+      />
+
+      {/* Admin routes */}
+      <Route
+        path="/admin/dashboard"
+        element={
+          <ProtectedRoute allowedRole="admin" role={role} session={session}>
+            <AdminDashboard />
+          </ProtectedRoute>
+        }
       />
 
       <Route
         path="/admin/ambassadors"
-        element={isAdmin ? <Ambassadors /> : <Navigate to="/" replace />}
+        element={
+          <ProtectedRoute allowedRole="admin" role={role} session={session}>
+            <Ambassadors />
+          </ProtectedRoute>
+        }
       />
 
       <Route
         path="/admin/colleges"
-        element={isAdmin ? <Colleges /> : <Navigate to="/" replace />}
+        element={
+          <ProtectedRoute allowedRole="admin" role={role} session={session}>
+            <Colleges />
+          </ProtectedRoute>
+        }
       />
 
       <Route
         path="/admin/campaigns"
-        element={isAdmin ? <Campaigns /> : <Navigate to="/" replace />}
+        element={
+          <ProtectedRoute allowedRole="admin" role={role} session={session}>
+            <Campaigns />
+          </ProtectedRoute>
+        }
       />
 
       <Route
         path="/admin/campaigns/:id"
-        element={isAdmin ? <CampaignDetails /> : <Navigate to="/" replace />}
+        element={
+          <ProtectedRoute allowedRole="admin" role={role} session={session}>
+            <CampaignDetails />
+          </ProtectedRoute>
+        }
       />
 
       <Route
         path="/admin/leads"
-        element={isAdmin ? <Leads /> : <Navigate to="/" replace />}
+        element={
+          <ProtectedRoute allowedRole="admin" role={role} session={session}>
+            <Leads />
+          </ProtectedRoute>
+        }
       />
-      <Route path="/c/:refCode" element={<CampaignLeadPage />} />
-      <Route path="/thank-you" element={<ThankYou />} />
 
       <Route
         path="/admin/tasks"
-        element={isAdmin ? <Tasks /> : <Navigate to="/" replace />}
+        element={
+          <ProtectedRoute allowedRole="admin" role={role} session={session}>
+            <Tasks />
+          </ProtectedRoute>
+        }
       />
 
       <Route
         path="/admin/proofs"
-        element={isAdmin ? <Proofs /> : <Navigate to="/" replace />}
+        element={
+          <ProtectedRoute allowedRole="admin" role={role} session={session}>
+            <Proofs />
+          </ProtectedRoute>
+        }
       />
 
       <Route
         path="/admin/leaderboard"
-        element={isAdmin ? <Leaderboard role="admin" /> : <Navigate to="/" replace />}
+        element={
+          <ProtectedRoute allowedRole="admin" role={role} session={session}>
+            <Leaderboard role="admin" />
+          </ProtectedRoute>
+        }
       />
 
       <Route
         path="/admin/reports"
-        element={isAdmin ? <Reports /> : <Navigate to="/" replace />}
+        element={
+          <ProtectedRoute allowedRole="admin" role={role} session={session}>
+            <Reports />
+          </ProtectedRoute>
+        }
       />
 
       <Route
         path="/admin/settings"
-        element={isAdmin ? <Settings /> : <Navigate to="/" replace />}
+        element={
+          <ProtectedRoute allowedRole="admin" role={role} session={session}>
+            <Settings />
+          </ProtectedRoute>
+        }
       />
 
+      {/* Ambassador routes */}
       <Route
-        path="/admin/campaigns"
-        element={isAdmin ? <Campaigns /> : <Navigate to="/" replace />}
+        path="/ambassador/dashboard"
+        element={
+          <ProtectedRoute allowedRole="ambassador" role={role} session={session}>
+            <AmbassadorDashboard />
+          </ProtectedRoute>
+        }
       />
 
       <Route
         path="/ambassador/campaigns"
-        element={isAmbassador ? <MyCampaigns /> : <Navigate to="/" replace />}
+        element={
+          <ProtectedRoute allowedRole="ambassador" role={role} session={session}>
+            <MyCampaigns />
+          </ProtectedRoute>
+        }
       />
 
       <Route
         path="/ambassador/referrals"
-        element={isAmbassador ? <MyCampaigns /> : <Navigate to="/" replace />}
+        element={
+          <ProtectedRoute allowedRole="ambassador" role={role} session={session}>
+            <MyCampaigns />
+          </ProtectedRoute>
+        }
       />
 
       <Route
         path="/ambassador/leads"
-        element={isAmbassador ? <MyLeads /> : <Navigate to="/" replace />}
+        element={
+          <ProtectedRoute allowedRole="ambassador" role={role} session={session}>
+            <MyLeads />
+          </ProtectedRoute>
+        }
       />
+
       <Route
         path="/ambassador/tasks"
-        element={isAmbassador ? <MyTasks /> : <Navigate to="/" replace />}
+        element={
+          <ProtectedRoute allowedRole="ambassador" role={role} session={session}>
+            <MyTasks />
+          </ProtectedRoute>
+        }
       />
 
       <Route
         path="/ambassador/proofs"
-        element={isAmbassador ? <MyTasks /> : <Navigate to="/" replace />}
+        element={
+          <ProtectedRoute allowedRole="ambassador" role={role} session={session}>
+            <MyTasks />
+          </ProtectedRoute>
+        }
       />
 
       <Route
         path="/ambassador/leaderboard"
         element={
-          isAmbassador ? <Leaderboard role="ambassador" /> : <Navigate to="/" replace />
+          <ProtectedRoute allowedRole="ambassador" role={role} session={session}>
+            <Leaderboard role="ambassador" />
+          </ProtectedRoute>
         }
       />
 
       <Route
         path="/ambassador/profile"
         element={
-          isAmbassador ? (
+          <ProtectedRoute allowedRole="ambassador" role={role} session={session}>
             <PlaceholderPage
               role="ambassador"
               title="Profile"
               subtitle="Manage your ambassador details"
             />
-          ) : (
-            <Navigate to="/" replace />
-          )
+          </ProtectedRoute>
         }
       />
 
-      <Route
-        path="/admin/dashboard"
-        element={isAdmin ? <AdminDashboard /> : <Navigate to="/" replace />}
-      />
-
-      <Route
-        path="/ambassador/dashboard"
-        element={
-          isAmbassador ? <AmbassadorDashboard /> : <Navigate to="/" replace />
-        }
-      />
-
+      {/* Root redirect */}
       <Route
         path="/"
         element={
           !session ? (
             <Navigate to="/login" replace />
-          ) : isAdmin ? (
-            <Navigate to="/admin/dashboard" replace />
-          ) : isAmbassador ? (
-            <Navigate to="/ambassador/dashboard" replace />
+          ) : role === 'admin' || role === 'ambassador' ? (
+            <Navigate to={getRoleHome(role)} replace />
           ) : (
-            <div className="flex min-h-screen items-center justify-center bg-[#f5f8fc] px-4">
-              <div className="max-w-md rounded-3xl border border-[#dde7f3] bg-white p-8 text-center shadow-sm">
-                <img src="/logo.svg" alt="Frint" className="mx-auto h-12" />
-                <h1 className="mt-6 text-2xl font-bold text-[#0b1220]">
-                  Account not assigned
-                </h1>
-                <p className="mt-3 text-[#64748b]">
-                  Your login exists, but no role is assigned yet. Add this user in the profiles table with role admin or ambassador.
-                </p>
-              </div>
-            </div>
+            <AccountNotAssigned />
           )
         }
       />
