@@ -317,3 +317,142 @@ a {
     border-radius: 15px;
   }
 }
+
+/* Mobile layout safety */
+#root {
+  width: 100%;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.frint-page,
+.frint-page main,
+.frint-page section,
+.frint-page div {
+  min-width: 0;
+}
+
+.frint-page img,
+.frint-page video {
+  max-width: 100%;
+}
+
+.frint-page table {
+  border-collapse: collapse;
+}
+
+.frint-table-wrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.frint-mobile-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.frint-compact-card {
+  border: 1px solid var(--frint-border);
+  background: var(--frint-card);
+  color: var(--frint-text);
+}
+
+@media (max-width: 768px) {
+  .frint-card {
+    border-radius: 22px !important;
+  }
+
+  .frint-soft-card {
+    border-radius: 18px !important;
+  }
+
+  .frint-page h1 {
+    font-size: 1.35rem;
+  }
+
+  .frint-page h2 {
+    font-size: 1.15rem;
+  }
+
+  .frint-page h3 {
+    font-size: 1rem;
+  }
+
+  .frint-page input,
+  .frint-page select,
+  .frint-page textarea {
+    min-height: 44px;
+    border-radius: 16px !important;
+    font-size: 0.92rem;
+  }
+
+  .frint-page textarea {
+    min-height: 88px;
+  }
+
+  .frint-page button {
+    min-height: 40px;
+  }
+
+  .frint-page table {
+    min-width: 680px;
+  }
+
+  .frint-page .rounded-\[30px\] {
+    border-radius: 22px !important;
+  }
+
+  .frint-page .rounded-\[28px\] {
+    border-radius: 22px !important;
+  }
+
+  .frint-page .rounded-\[26px\] {
+    border-radius: 20px !important;
+  }
+
+  .frint-page .rounded-\[24px\] {
+    border-radius: 18px !important;
+  }
+
+  .frint-page .p-8 {
+    padding: 1.25rem !important;
+  }
+
+  .frint-page .p-7 {
+    padding: 1.15rem !important;
+  }
+
+  .frint-page .p-6 {
+    padding: 1rem !important;
+  }
+
+  .frint-page .p-5 {
+    padding: 0.95rem !important;
+  }
+
+  .frint-page .gap-6 {
+    gap: 1rem !important;
+  }
+
+  .frint-page .gap-5 {
+    gap: 0.9rem !important;
+  }
+
+  .frint-page .mt-6 {
+    margin-top: 1rem !important;
+  }
+
+  .frint-page .mt-5 {
+    margin-top: 0.9rem !important;
+  }
+
+  .frint-page .space-y-6> :not([hidden])~ :not([hidden]) {
+    margin-top: 1rem !important;
+  }
+
+  .frint-page .space-y-5> :not([hidden])~ :not([hidden]) {
+    margin-top: 0.85rem !important;
+  }
+}
