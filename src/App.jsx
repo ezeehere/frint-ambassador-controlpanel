@@ -21,6 +21,7 @@ import MyTasks from './pages/ambassador/MyTasks'
 import Leaderboard from './pages/Leaderboard'
 import Reports from './pages/admin/Reports'
 import SuspendedAccount from './pages/SuspendedAccount'
+import Settings from './pages/admin/Settings'
 
 function getIntroKey(pathname) {
   if (pathname.startsWith('/c/')) {
@@ -196,17 +197,7 @@ function AppGate() {
 
       <Route
         path="/admin/settings"
-        element={
-          isAdmin ? (
-            <PlaceholderPage
-              role="admin"
-              title="Settings"
-              subtitle="Control panel settings"
-            />
-          ) : (
-            <Navigate to="/" replace />
-          )
-        }
+        element={isAdmin ? <Settings /> : <Navigate to="/" replace />}
       />
 
       <Route
