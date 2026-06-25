@@ -12,6 +12,7 @@ import DashboardLayout from '../../components/layout/DashboardLayout'
 import StatusBadge from '../../components/ui/StatusBadge'
 import EmptyState from '../../components/ui/EmptyState'
 import { supabase } from '../../lib/supabase'
+import CampaignFormBuilder from '../../components/admin/CampaignFormBuilder'
 
 const initialForm = {
     title: '',
@@ -23,6 +24,7 @@ const initialForm = {
     action_mode: 'internal_form',
     audience_type: 'students',
     form_type: 'basic_student_form',
+    form_schema: [],
     external_url: '',
     start_date: '',
     end_date: '',
@@ -84,6 +86,7 @@ const formTypes = [
     ['event_form', 'Event Form'],
     ['feedback_form', 'Feedback Form'],
     ['ambassador_application_form', 'Ambassador Application Form'],
+    ['custom_form', 'Custom Form'],
     ['none', 'No Form'],
 ]
 
@@ -252,6 +255,18 @@ export default function Campaigns() {
             return
         }
 
+        if (form.form_type === 'custom_form') {
+            const invalidField = form.form_schema.some((field) => {
+                return !field.label?.trim() || !field.name?.trim()
+            })
+
+            if (invalidField) {
+                setMessage('Every custom field needs a question label and field key.')
+                setSaving(false)
+                return
+            }
+        }
+
         const finalSlug = `${baseSlug}-${shortCode()}`
 
         const campaignResult = await supabase
@@ -267,6 +282,7 @@ export default function Campaigns() {
                 action_mode: form.action_mode,
                 audience_type: form.audience_type,
                 form_type: form.form_type,
+                form_schema: form.form_type === 'custom_form' ? form.form_schema : [],
                 external_url: normalizedExternalUrl,
                 target_url: normalizedExternalUrl,
                 start_date: form.start_date || null,
@@ -352,7 +368,7 @@ export default function Campaigns() {
             title="Campaigns"
             subtitle="Create flexible Frint operations"
         >
-            <div className="grid gap-6 xl:grid-cols-[0.95fr_1.25fr]">
+            <div className="grid gap-6 xl:grid-cols-[520px_1fr]">
                 <section className="frint-card rounded-[30px] p-5">
                     <div className="flex items-center gap-3">
                         <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-[#0060f8]">
@@ -518,6 +534,20 @@ export default function Campaigns() {
                                 className="mt-4 w-full rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
                                 placeholder="External URL, needed for external/hybrid campaigns"
                             />
+
+                            {form.form_type === 'custom_form' && (
+                                <div className="mt-4">
+                                    <CampaignFormBuilder
+                                        value={form.form_schema}
+                                        onChange={(schema) =>
+                                            setForm({
+                                                ...form,
+                                                form_schema: schema,
+                                            })
+                                        }
+                                    />
+                                </div>
+                            )}
                         </div>
 
                         <div className="rounded-[24px] border frint-border bg-[var(--frint-soft-card)] p-4">

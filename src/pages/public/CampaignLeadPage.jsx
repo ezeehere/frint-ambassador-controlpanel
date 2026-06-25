@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowRight, Loader2, ShieldAlert } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 
+
 const initialForm = {
     student_name: '',
     email: '',
@@ -40,6 +41,7 @@ export default function CampaignLeadPage() {
     const [campaign, setCampaign] = useState(null)
     const [colleges, setColleges] = useState([])
     const [settings, setSettings] = useState(null)
+    const [customAnswers, setCustomAnswers] = useState({})
     const [form, setForm] = useState(initialForm)
     const [loading, setLoading] = useState(true)
     const [submitting, setSubmitting] = useState(false)
@@ -70,6 +72,7 @@ export default function CampaignLeadPage() {
           status,
           action_mode,
           form_type,
+          form_schema,
           external_url,
           target_url,
           primary_action
@@ -136,6 +139,7 @@ export default function CampaignLeadPage() {
             rating: form.rating,
             feedback: form.feedback,
             why_join: form.why_join,
+            custom_answers: customAnswers,
         }
 
         const result = await supabase
@@ -375,6 +379,114 @@ export default function CampaignLeadPage() {
         )
     }
 
+    const renderCustomFields = () => {
+        if (campaign?.form_type !== 'custom_form') return null
+
+        const fields = Array.isArray(campaign.form_schema)
+            ? campaign.form_schema
+            : []
+
+        if (fields.length === 0) return null
+
+        return (
+            <div className="space-y-4">
+                {fields.map((field) => {
+                    const value = customAnswers[field.name] || ''
+
+                    if (field.type === 'textarea') {
+                        return (
+                            <textarea
+                                key={field.id}
+                                value={value}
+                                required={Boolean(field.required)}
+                                onChange={(e) =>
+                                    setCustomAnswers({
+                                        ...customAnswers,
+                                        [field.name]: e.target.value,
+                                    })
+                                }
+                                className="min-h-24 w-full rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
+                                placeholder={field.placeholder || field.label}
+                            />
+                        )
+                    }
+
+                    if (field.type === 'select') {
+                        return (
+                            <select
+                                key={field.id}
+                                value={value}
+                                required={Boolean(field.required)}
+                                onChange={(e) =>
+                                    setCustomAnswers({
+                                        ...customAnswers,
+                                        [field.name]: e.target.value,
+                                    })
+                                }
+                                className="w-full rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
+                            >
+                                <option value="">{field.label}</option>
+                                {(field.options || []).map((option) => (
+                                    <option key={option} value={option}>
+                                        {option}
+                                    </option>
+                                ))}
+                            </select>
+                        )
+                    }
+
+                    if (field.type === 'checkbox') {
+                        return (
+                            <label
+                                key={field.id}
+                                className="flex cursor-pointer items-center gap-3 rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold frint-muted"
+                            >
+                                <input
+                                    type="checkbox"
+                                    checked={Boolean(customAnswers[field.name])}
+                                    onChange={(e) =>
+                                        setCustomAnswers({
+                                            ...customAnswers,
+                                            [field.name]: e.target.checked,
+                                        })
+                                    }
+                                />
+                                {field.label}
+                            </label>
+                        )
+                    }
+
+                    return (
+                        <input
+                            key={field.id}
+                            type={
+                                field.type === 'phone'
+                                    ? 'tel'
+                                    : field.type === 'number'
+                                        ? 'number'
+                                        : field.type === 'date'
+                                            ? 'date'
+                                            : field.type === 'email'
+                                                ? 'email'
+                                                : 'text'
+                            }
+                            value={value}
+                            required={Boolean(field.required)}
+                            onChange={(e) =>
+                                setCustomAnswers({
+                                    ...customAnswers,
+                                    [field.name]: e.target.value,
+                                })
+                            }
+                            className="w-full rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
+                            placeholder={field.placeholder || field.label}
+                        />
+                    )
+                })}
+            </div>
+        )
+    }
+
     return (
         <div className="frint-page min-h-screen px-4 py-8">
             <main className="mx-auto max-w-xl">
@@ -476,6 +588,7 @@ export default function CampaignLeadPage() {
                         />
 
                         {renderExtraFields()}
+                        {renderCustomFields()}
 
                         <button
                             type="submit"
