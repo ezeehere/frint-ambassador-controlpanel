@@ -8,6 +8,7 @@ import Ambassadors from './pages/admin/Ambassadors'
 import Colleges from './pages/admin/Colleges'
 import Campaigns from './pages/admin/Campaigns'
 import PlaceholderPage from './pages/PlaceholderPage'
+import CampaignDetails from './pages/admin/CampaignDetails'
 import CampaignLeadPage from './pages/public/CampaignLeadPage'
 import ThankYou from './pages/public/ThankYou'
 import Leads from './pages/admin/Leads'
@@ -166,6 +167,11 @@ function AppGate() {
       <Route
         path="/admin/campaigns"
         element={isAdmin ? <Campaigns /> : <Navigate to="/" replace />}
+      />
+
+      <Route
+        path="/admin/campaigns/:id"
+        element={isAdmin ? <CampaignDetails /> : <Navigate to="/" replace />}
       />
 
       <Route

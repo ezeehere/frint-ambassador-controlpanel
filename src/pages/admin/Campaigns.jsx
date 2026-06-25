@@ -13,6 +13,7 @@ import StatusBadge from '../../components/ui/StatusBadge'
 import EmptyState from '../../components/ui/EmptyState'
 import { supabase } from '../../lib/supabase'
 import CampaignFormBuilder from '../../components/admin/CampaignFormBuilder'
+import { Link } from 'react-router-dom'
 
 const initialForm = {
     title: '',
@@ -803,17 +804,25 @@ export default function Campaigns() {
                                                     </span>
                                                 </div>
                                             </div>
+                                            <div className="flex flex-col gap-2 sm:flex-row">
+                                                <Link
+                                                    to={`/admin/campaigns/${campaign.id}`}
+                                                    className="frint-secondary-btn flex items-center justify-center gap-2 px-4 py-2 text-sm"
+                                                >
+                                                    View details
+                                                </Link>
 
-                                            <select
-                                                value={campaign.status || 'draft'}
-                                                onChange={(e) => updateCampaignStatus(campaign.id, e.target.value)}
-                                                className="rounded-2xl border frint-border bg-[var(--frint-card)] px-3 py-2 text-sm font-bold outline-none"
-                                            >
-                                                <option value="draft">Draft</option>
-                                                <option value="active">Active</option>
-                                                <option value="paused">Paused</option>
-                                                <option value="completed">Completed</option>
-                                            </select>
+                                                <select
+                                                    value={campaign.status || 'draft'}
+                                                    onChange={(e) => updateCampaignStatus(campaign.id, e.target.value)}
+                                                    className="rounded-2xl border frint-border bg-[var(--frint-card)] px-3 py-2 text-sm font-bold outline-none"
+                                                >
+                                                    <option value="draft">Draft</option>
+                                                    <option value="active">Active</option>
+                                                    <option value="paused">Paused</option>
+                                                    <option value="completed">Completed</option>
+                                                </select>
+                                            </div>
                                         </div>
 
                                         <div className="mt-5 grid gap-3 sm:grid-cols-3">
