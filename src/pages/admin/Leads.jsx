@@ -18,31 +18,33 @@ export default function Leads() {
         const result = await supabase
             .from('leads')
             .select(`
-        id,
-        student_name,
-        email,
-        phone,
-        course,
-        year,
-        city,
-        interest,
-        status,
-        created_at,
-        campaigns (
-          id,
-          title
-        ),
-        profiles (
-          id,
-          full_name,
-          email
-        ),
-        colleges (
-          id,
-          name,
-          city
-        )
-      `)
+                id,
+                student_name,
+                email,
+                phone,
+                course,
+                year,
+                city,
+                interest,
+                status,
+                form_type,
+                raw_answers,
+                created_at,
+                campaigns (
+                    id,
+                    title
+                ),
+                profiles (
+                    id,
+                    full_name,
+                    email
+                ),
+                colleges (
+                    id,
+                    name,
+                    city
+                )
+                `)
             .order('created_at', { ascending: false })
 
         if (result.error) {
@@ -234,6 +236,27 @@ export default function Leads() {
                                                         {lead.email}
                                                     </p>
                                                 )}
+
+                                                {lead.form_type === 'custom_form' &&
+                                                    lead.raw_answers?.custom_answers &&
+                                                    Object.keys(lead.raw_answers.custom_answers).length > 0 && (
+                                                        <div className="mt-3 rounded-[18px] bg-[var(--frint-soft-card)] p-3">
+                                                            <p className="mb-2 text-xs font-black uppercase tracking-wide frint-muted">
+                                                                Custom answers
+                                                            </p>
+
+                                                            <div className="space-y-1">
+                                                                {Object.entries(lead.raw_answers.custom_answers).map(([key, value]) => (
+                                                                    <p key={key} className="text-sm font-bold frint-muted">
+                                                                        <span className="font-black capitalize text-[var(--frint-text)]">
+                                                                            {key.replaceAll('_', ' ')}:
+                                                                        </span>{' '}
+                                                                        {String(value)}
+                                                                    </p>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
                                             </td>
 
                                             <td className="px-4 py-4 text-sm font-bold frint-muted">
@@ -268,7 +291,6 @@ export default function Leads() {
                                                     <option value="converted">Converted</option>
                                                     <option value="rejected">Rejected</option>
                                                 </select>
-                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>

@@ -38,6 +38,8 @@ export default function MyLeads() {
         city,
         interest,
         status,
+        raw_answers,
+        form_type,
         created_at,
         campaigns (
           id,
@@ -166,6 +168,27 @@ export default function MyLeads() {
                                                         {lead.email}
                                                     </p>
                                                 )}
+
+                                                {lead.form_type === 'custom_form' &&
+                                                    lead.raw_answers?.custom_answers &&
+                                                    Object.keys(lead.raw_answers.custom_answers).length > 0 && (
+                                                        <div className="mt-3 rounded-[18px] bg-[var(--frint-soft-card)] p-3">
+                                                            <p className="mb-2 text-xs font-black uppercase tracking-wide frint-muted">
+                                                                Custom answers
+                                                            </p>
+
+                                                            <div className="space-y-1">
+                                                                {Object.entries(lead.raw_answers.custom_answers).map(([key, value]) => (
+                                                                    <p key={key} className="text-sm font-bold frint-muted">
+                                                                        <span className="font-black capitalize text-[var(--frint-text)]">
+                                                                            {key.replaceAll('_', ' ')}:
+                                                                        </span>{' '}
+                                                                        {String(value)}
+                                                                    </p>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
                                             </td>
 
                                             <td className="px-4 py-4 text-sm font-bold frint-muted">
