@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
-    Link2,
     Megaphone,
     Plus,
     RefreshCw,
@@ -8,12 +7,12 @@ import {
     Target,
     Users,
 } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import StatusBadge from '../../components/ui/StatusBadge'
 import EmptyState from '../../components/ui/EmptyState'
 import { supabase } from '../../lib/supabase'
 import CampaignFormBuilder from '../../components/admin/CampaignFormBuilder'
-import { Link } from 'react-router-dom'
 
 const initialForm = {
     title: '',
@@ -105,10 +104,7 @@ function normalizeExternalUrl(url) {
 
     if (!cleanedUrl) return null
 
-    if (
-        cleanedUrl.startsWith('http://') ||
-        cleanedUrl.startsWith('https://')
-    ) {
+    if (cleanedUrl.startsWith('http://') || cleanedUrl.startsWith('https://')) {
         return cleanedUrl
     }
 
@@ -139,8 +135,6 @@ export default function Campaigns() {
     const [selectedAmbassadors, setSelectedAmbassadors] = useState([])
     const [form, setForm] = useState(initialForm)
     const [search, setSearch] = useState('')
-    const [assignmentDrafts, setAssignmentDrafts] = useState({})
-    const [assigningCampaignId, setAssigningCampaignId] = useState(null)
     const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
     const [message, setMessage] = useState('')
@@ -223,73 +217,6 @@ export default function Campaigns() {
 
     const getAmbassadorById = (id) => {
         return ambassadors.find((item) => item.id === id)
-    }
-
-    const getUnassignedAmbassadors = (campaignId) => {
-        const campaignAssignments = getCampaignAssignments(campaignId)
-        const assignedIds = campaignAssignments.map((item) => item.ambassador_id)
-
-        return ambassadors.filter((ambassador) => !assignedIds.includes(ambassador.id))
-    }
-
-    const updateAssignmentDraft = (campaignId, patch) => {
-        setAssignmentDrafts((current) => ({
-            ...current,
-            [campaignId]: {
-                ambassador_id: '',
-                target_count: 50,
-                deadline: '',
-                ...(current[campaignId] || {}),
-                ...patch,
-            },
-        }))
-    }
-
-    const assignAmbassadorToCampaign = async (campaign) => {
-        const draft = assignmentDrafts[campaign.id] || {}
-
-        if (!draft.ambassador_id) {
-            setMessage('Please select an ambassador.')
-            return
-        }
-
-        setAssigningCampaignId(campaign.id)
-        setMessage('')
-
-        const ambassador = getAmbassadorById(draft.ambassador_id)
-        const namePart = slugify(ambassador?.full_name || ambassador?.email || 'ambassador')
-
-        const result = await supabase
-            .from('ambassador_campaigns')
-            .insert({
-                ambassador_id: draft.ambassador_id,
-                campaign_id: campaign.id,
-                ref_code: `${campaign.slug}-${namePart}-${shortCode()}`,
-                status: 'active',
-                target_count: Number(draft.target_count) || 0,
-                deadline: draft.deadline || campaign.end_date || null,
-                points_per_lead: Number(campaign.points_per_lead) || 0,
-                points_per_conversion: Number(campaign.points_per_conversion) || 0,
-                notes: null,
-            })
-
-        if (result.error) {
-            setMessage(result.error.message)
-            setAssigningCampaignId(null)
-            return
-        }
-
-        setAssignmentDrafts((current) => ({
-            ...current,
-            [campaign.id]: {
-                ambassador_id: '',
-                target_count: 50,
-                deadline: '',
-            },
-        }))
-
-        await loadData()
-        setAssigningCampaignId(null)
     }
 
     const toggleAmbassador = (ambassadorId) => {
@@ -426,52 +353,189 @@ export default function Campaigns() {
         await loadData()
     }
 
-    const copyReferralLink = async (refCode) => {
-        const link = `${window.location.origin}/c/${refCode}`
-        await navigator.clipboard.writeText(link)
-        alert('Referral link copied')
-    }
-
     return (
         <DashboardLayout
             role="admin"
             title="Campaigns"
-            subtitle="Create flexible Frint operations"
+            subtitle="Create and track Frint operations"
         >
-            <div className="grid gap-6 xl:grid-cols-[520px_1fr]">
-                <section className="frint-card rounded-[30px] p-5">
-                    <div className="flex items-center gap-3">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-[#0060f8]">
-                            <Megaphone size={21} />
+            <div className="grid gap-4 xl:grid-cols-[420px_1fr]">
+                <section className="frint-card order-1 rounded-[24px] p-4 sm:p-5 xl:order-2">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                        <div>
+                            <h2 className="text-lg font-semibold text-[var(--frint-text)]">
+                                Campaign list
+                            </h2>
+                            <p className="mt-0.5 text-sm frint-muted">
+                                {filteredCampaigns.length} campaigns
+                            </p>
                         </div>
 
-                        <div>
-                            <h2 className="text-xl font-black text-[var(--frint-text)]">
-                                New campaign
-                            </h2>
-                            <p className="text-sm frint-muted">
-                                Operation, action, assignment
-                            </p>
+                        <div className="grid gap-2 sm:flex sm:items-center">
+                            <div className="flex min-w-0 items-center gap-2 rounded-full border frint-border bg-[var(--frint-card)] px-3 py-2">
+                                <Search size={16} className="shrink-0 frint-muted" />
+                                <input
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    placeholder="Search"
+                                    className="min-w-0 flex-1 bg-transparent text-sm font-medium outline-none placeholder:text-slate-400 sm:w-56"
+                                />
+                            </div>
+
+                            <button
+                                onClick={loadData}
+                                className="frint-secondary-btn flex items-center justify-center gap-2 px-4 py-2 text-sm"
+                            >
+                                <RefreshCw size={15} />
+                                Refresh
+                            </button>
                         </div>
                     </div>
 
                     {message && (
-                        <div className="mt-5 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+                        <div className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
                             {message}
                         </div>
                     )}
 
-                    <form onSubmit={handleCreateCampaign} className="mt-6 space-y-5">
-                        <div className="rounded-[24px] border frint-border bg-[var(--frint-soft-card)] p-4">
-                            <p className="mb-4 text-sm font-black text-[var(--frint-text)]">
+                    <div className="mt-4 space-y-3">
+                        {loading ? (
+                            <div className="rounded-[20px] border frint-border p-6 text-center text-sm font-medium frint-muted">
+                                Loading campaigns...
+                            </div>
+                        ) : filteredCampaigns.length === 0 ? (
+                            <EmptyState
+                                title="No campaigns found"
+                                message="Create the first Frint campaign from the form."
+                            />
+                        ) : (
+                            filteredCampaigns.map((campaign) => {
+                                const campaignAssignments = getCampaignAssignments(campaign.id)
+                                const progress = getCampaignProgress(campaign.id)
+                                const progressPercent = Number(progress?.progress_percent || 0)
+
+                                return (
+                                    <article key={campaign.id} className="rounded-[20px] border frint-border bg-[var(--frint-card)] p-4">
+                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                            <div className="min-w-0">
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <h3 className="truncate text-[16px] font-semibold text-[var(--frint-text)]">
+                                                        {campaign.title}
+                                                    </h3>
+                                                    <StatusBadge status={campaign.status} />
+                                                </div>
+
+                                                <p className="mt-1 truncate text-sm font-medium frint-muted">
+                                                    {getLabel(campaignTypes, campaign.type)} • {getLabel(actionModes, campaign.action_mode)}
+                                                </p>
+
+                                                <div className="mt-2 flex flex-wrap gap-1.5">
+                                                    <span className="rounded-full bg-[var(--frint-soft-card)] px-2.5 py-1 text-[11px] font-semibold frint-muted">
+                                                        {getLabel(audienceTypes, campaign.audience_type)}
+                                                    </span>
+
+                                                    <span className="rounded-full bg-[var(--frint-soft-card)] px-2.5 py-1 text-[11px] font-semibold frint-muted">
+                                                        {getLabel(formTypes, campaign.form_type)}
+                                                    </span>
+
+                                                    <span className="rounded-full bg-[var(--frint-soft-card)] px-2.5 py-1 text-[11px] font-semibold frint-muted">
+                                                        {campaign.priority}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
+                                                <Link
+                                                    to={`/admin/campaigns/${campaign.id}`}
+                                                    className="frint-secondary-btn flex items-center justify-center px-3 py-2 text-sm"
+                                                >
+                                                    Details
+                                                </Link>
+
+                                                <select
+                                                    value={campaign.status || 'draft'}
+                                                    onChange={(e) => updateCampaignStatus(campaign.id, e.target.value)}
+                                                    className="rounded-full border frint-border bg-[var(--frint-card)] px-3 py-2 text-sm font-medium outline-none"
+                                                >
+                                                    <option value="draft">Draft</option>
+                                                    <option value="active">Active</option>
+                                                    <option value="paused">Paused</option>
+                                                    <option value="completed">Completed</option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-4 grid grid-cols-3 gap-2">
+                                            <div className="min-w-0 rounded-2xl bg-[var(--frint-soft-card)] px-3 py-2">
+                                                <div className="flex items-center gap-1.5 text-[var(--frint-blue)]">
+                                                    <Target size={14} />
+                                                    <p className="truncate text-[11px] font-semibold">Progress</p>
+                                                </div>
+                                                <p className="mt-1 truncate text-[17px] font-semibold text-[var(--frint-text)]">
+                                                    {progress?.total_leads || 0}/{campaign.target_count || 0}
+                                                </p>
+                                            </div>
+
+                                            <div className="min-w-0 rounded-2xl bg-[var(--frint-soft-card)] px-3 py-2">
+                                                <div className="flex items-center gap-1.5 text-[var(--frint-blue)]">
+                                                    <Users size={14} />
+                                                    <p className="truncate text-[11px] font-semibold">Assigned</p>
+                                                </div>
+                                                <p className="mt-1 truncate text-[17px] font-semibold text-[var(--frint-text)]">
+                                                    {campaignAssignments.length}
+                                                </p>
+                                            </div>
+
+                                            <div className="min-w-0 rounded-2xl bg-[var(--frint-soft-card)] px-3 py-2">
+                                                <p className="truncate text-[11px] font-semibold frint-muted">
+                                                    Converted
+                                                </p>
+                                                <p className="mt-1 truncate text-[17px] font-semibold text-[var(--frint-text)]">
+                                                    {progress?.converted_leads || 0}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[var(--frint-soft-card)]">
+                                            <div
+                                                className="h-full rounded-full bg-[var(--frint-accent)]"
+                                                style={{ width: `${Math.min(progressPercent, 100)}%` }}
+                                            />
+                                        </div>
+                                    </article>
+                                )
+                            })
+                        )}
+                    </div>
+                </section>
+
+                <section className="frint-card order-2 rounded-[24px] p-4 sm:p-5 xl:order-1">
+                    <div className="flex items-center gap-3">
+                        <div className="frint-icon-chip">
+                            <Megaphone size={19} />
+                        </div>
+
+                        <div>
+                            <h2 className="text-lg font-semibold text-[var(--frint-text)]">
+                                New campaign
+                            </h2>
+                            <p className="text-sm frint-muted">
+                                Operation, form, assignment
+                            </p>
+                        </div>
+                    </div>
+
+                    <form onSubmit={handleCreateCampaign} className="mt-4 space-y-3">
+                        <div className="rounded-[20px] border frint-border bg-[var(--frint-soft-card)] p-3">
+                            <p className="mb-3 text-sm font-semibold text-[var(--frint-text)]">
                                 Basic details
                             </p>
 
-                            <div className="space-y-4">
+                            <div className="grid gap-3">
                                 <input
                                     value={form.title}
                                     onChange={(e) => setForm({ ...form, title: e.target.value })}
-                                    className="w-full rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
+                                    className="frint-input"
                                     placeholder="Campaign title"
                                     required
                                 />
@@ -479,15 +543,15 @@ export default function Campaigns() {
                                 <textarea
                                     value={form.description}
                                     onChange={(e) => setForm({ ...form, description: e.target.value })}
-                                    className="min-h-20 w-full rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
+                                    className="frint-input min-h-20 resize-y"
                                     placeholder="Short note"
                                 />
 
-                                <div className="grid gap-4 sm:grid-cols-2">
+                                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
                                     <select
                                         value={form.type}
                                         onChange={(e) => setForm({ ...form, type: e.target.value })}
-                                        className="rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
+                                        className="frint-input"
                                     >
                                         {campaignTypes.map(([value, label]) => (
                                             <option key={value} value={value}>
@@ -499,7 +563,7 @@ export default function Campaigns() {
                                     <select
                                         value={form.priority}
                                         onChange={(e) => setForm({ ...form, priority: e.target.value })}
-                                        className="rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
+                                        className="frint-input"
                                     >
                                         {priorities.map(([value, label]) => (
                                             <option key={value} value={value}>
@@ -509,34 +573,34 @@ export default function Campaigns() {
                                     </select>
                                 </div>
 
-                                <div className="grid gap-4 sm:grid-cols-2">
+                                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
                                     <input
                                         type="date"
                                         value={form.start_date}
                                         onChange={(e) => setForm({ ...form, start_date: e.target.value })}
-                                        className="rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
+                                        className="frint-input"
                                     />
 
                                     <input
                                         type="date"
                                         value={form.end_date}
                                         onChange={(e) => setForm({ ...form, end_date: e.target.value })}
-                                        className="rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
+                                        className="frint-input"
                                     />
                                 </div>
                             </div>
                         </div>
 
-                        <div className="rounded-[24px] border frint-border bg-[var(--frint-soft-card)] p-4">
-                            <p className="mb-4 text-sm font-black text-[var(--frint-text)]">
+                        <div className="rounded-[20px] border frint-border bg-[var(--frint-soft-card)] p-3">
+                            <p className="mb-3 text-sm font-semibold text-[var(--frint-text)]">
                                 Goal and action
                             </p>
 
-                            <div className="grid gap-4 sm:grid-cols-2">
+                            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
                                 <select
                                     value={form.action_mode}
                                     onChange={(e) => setForm({ ...form, action_mode: e.target.value })}
-                                    className="rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
+                                    className="frint-input"
                                 >
                                     {actionModes.map(([value, label]) => (
                                         <option key={value} value={value}>
@@ -548,7 +612,7 @@ export default function Campaigns() {
                                 <select
                                     value={form.primary_action}
                                     onChange={(e) => setForm({ ...form, primary_action: e.target.value })}
-                                    className="rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
+                                    className="frint-input"
                                 >
                                     {primaryActions.map(([value, label]) => (
                                         <option key={value} value={value}>
@@ -560,7 +624,7 @@ export default function Campaigns() {
                                 <select
                                     value={form.audience_type}
                                     onChange={(e) => setForm({ ...form, audience_type: e.target.value })}
-                                    className="rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
+                                    className="frint-input"
                                 >
                                     {audienceTypes.map(([value, label]) => (
                                         <option key={value} value={value}>
@@ -572,7 +636,7 @@ export default function Campaigns() {
                                 <select
                                     value={form.form_type}
                                     onChange={(e) => setForm({ ...form, form_type: e.target.value })}
-                                    className="rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
+                                    className="frint-input"
                                 >
                                     {formTypes.map(([value, label]) => (
                                         <option key={value} value={value}>
@@ -586,14 +650,14 @@ export default function Campaigns() {
                                     min="0"
                                     value={form.target_count}
                                     onChange={(e) => setForm({ ...form, target_count: e.target.value })}
-                                    className="rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
+                                    className="frint-input"
                                     placeholder="Campaign target"
                                 />
 
                                 <input
                                     value={form.goal_type}
                                     onChange={(e) => setForm({ ...form, goal_type: e.target.value })}
-                                    className="rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
+                                    className="frint-input"
                                     placeholder="Goal type"
                                 />
                             </div>
@@ -601,12 +665,12 @@ export default function Campaigns() {
                             <input
                                 value={form.external_url}
                                 onChange={(e) => setForm({ ...form, external_url: e.target.value })}
-                                className="mt-4 w-full rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
-                                placeholder="External URL, needed for external/hybrid campaigns"
+                                className="frint-input mt-3"
+                                placeholder="External URL for external/hybrid campaigns"
                             />
 
                             {form.form_type === 'custom_form' && (
-                                <div className="mt-4">
+                                <div className="mt-3">
                                     <CampaignFormBuilder
                                         value={form.form_schema}
                                         onChange={(schema) =>
@@ -620,18 +684,18 @@ export default function Campaigns() {
                             )}
                         </div>
 
-                        <div className="rounded-[24px] border frint-border bg-[var(--frint-soft-card)] p-4">
-                            <p className="mb-4 text-sm font-black text-[var(--frint-text)]">
+                        <div className="rounded-[20px] border frint-border bg-[var(--frint-soft-card)] p-3">
+                            <p className="mb-3 text-sm font-semibold text-[var(--frint-text)]">
                                 Points and proof
                             </p>
 
-                            <div className="grid gap-4 sm:grid-cols-3">
+                            <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-1 2xl:grid-cols-3">
                                 <input
                                     type="number"
                                     min="0"
                                     value={form.points_per_lead}
                                     onChange={(e) => setForm({ ...form, points_per_lead: e.target.value })}
-                                    className="rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
+                                    className="frint-input"
                                     placeholder="Points per lead"
                                 />
 
@@ -640,7 +704,7 @@ export default function Campaigns() {
                                     min="0"
                                     value={form.points_per_conversion}
                                     onChange={(e) => setForm({ ...form, points_per_conversion: e.target.value })}
-                                    className="rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
+                                    className="frint-input"
                                     placeholder="Points per conversion"
                                 />
 
@@ -649,12 +713,12 @@ export default function Campaigns() {
                                     min="0"
                                     value={form.points_per_proof}
                                     onChange={(e) => setForm({ ...form, points_per_proof: e.target.value })}
-                                    className="rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
+                                    className="frint-input"
                                     placeholder="Points per proof"
                                 />
                             </div>
 
-                            <label className="mt-4 flex items-center gap-3 rounded-2xl bg-[var(--frint-card)] px-4 py-3 text-sm font-bold text-[var(--frint-text)]">
+                            <label className="mt-3 flex items-center gap-3 rounded-2xl bg-[var(--frint-card)] px-3 py-2.5 text-sm font-medium text-[var(--frint-text)]">
                                 <input
                                     type="checkbox"
                                     checked={form.requires_proof}
@@ -664,18 +728,18 @@ export default function Campaigns() {
                             </label>
                         </div>
 
-                        <div className="rounded-[24px] border frint-border bg-[var(--frint-soft-card)] p-4">
-                            <p className="mb-4 text-sm font-black text-[var(--frint-text)]">
+                        <div className="rounded-[20px] border frint-border bg-[var(--frint-soft-card)] p-3">
+                            <p className="mb-3 text-sm font-semibold text-[var(--frint-text)]">
                                 Ambassador assignment
                             </p>
 
-                            <div className="mb-4 grid gap-4 sm:grid-cols-2">
+                            <div className="mb-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
                                 <input
                                     type="number"
                                     min="0"
                                     value={form.assignment_target_count}
                                     onChange={(e) => setForm({ ...form, assignment_target_count: e.target.value })}
-                                    className="rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
+                                    className="frint-input"
                                     placeholder="Target per ambassador"
                                 />
 
@@ -683,20 +747,20 @@ export default function Campaigns() {
                                     type="date"
                                     value={form.assignment_deadline}
                                     onChange={(e) => setForm({ ...form, assignment_deadline: e.target.value })}
-                                    className="rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
+                                    className="frint-input"
                                 />
                             </div>
 
-                            <div className="max-h-56 space-y-2 overflow-y-auto">
+                            <div className="max-h-48 space-y-2 overflow-y-auto frint-scrollbar">
                                 {ambassadors.length === 0 ? (
-                                    <p className="text-sm font-bold frint-muted">
+                                    <p className="text-sm font-medium frint-muted">
                                         No active ambassadors found.
                                     </p>
                                 ) : (
                                     ambassadors.map((ambassador) => (
                                         <label
                                             key={ambassador.id}
-                                            className="flex cursor-pointer items-center gap-3 rounded-2xl bg-[var(--frint-card)] px-3 py-3"
+                                            className="flex cursor-pointer items-center gap-3 rounded-2xl bg-[var(--frint-card)] px-3 py-2.5"
                                         >
                                             <input
                                                 type="checkbox"
@@ -705,7 +769,7 @@ export default function Campaigns() {
                                             />
 
                                             <div className="min-w-0">
-                                                <p className="truncate text-sm font-black text-[var(--frint-text)]">
+                                                <p className="truncate text-sm font-semibold text-[var(--frint-text)]">
                                                     {ambassador.full_name || ambassador.email}
                                                 </p>
                                                 <p className="truncate text-xs frint-muted">
@@ -721,158 +785,12 @@ export default function Campaigns() {
                         <button
                             type="submit"
                             disabled={saving}
-                            className="frint-primary-btn flex w-full items-center justify-center gap-2 px-5 py-3 text-sm disabled:opacity-60"
+                            className="frint-primary-btn flex w-full items-center justify-center gap-2 px-5 py-2.5 text-sm disabled:opacity-60"
                         >
-                            <Plus size={17} />
+                            <Plus size={16} />
                             {saving ? 'Creating...' : 'Create campaign'}
                         </button>
                     </form>
-                </section>
-
-                <section className="frint-card rounded-[30px] p-5">
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                        <div>
-                            <h2 className="text-xl font-black text-[var(--frint-text)]">
-                                Campaign list
-                            </h2>
-                            <p className="mt-1 text-sm frint-muted">
-                                Track progress and referral links
-                            </p>
-                        </div>
-
-                        <div className="flex flex-col gap-3 sm:flex-row">
-                            <div className="flex items-center gap-2 rounded-full border frint-border bg-[var(--frint-card)] px-4 py-2.5">
-                                <Search size={17} className="frint-muted" />
-                                <input
-                                    value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
-                                    placeholder="Search"
-                                    className="w-full bg-transparent text-sm font-semibold outline-none placeholder:text-slate-400 sm:w-56"
-                                />
-                            </div>
-
-                            <button
-                                onClick={loadData}
-                                className="frint-secondary-btn flex items-center justify-center gap-2 px-5 py-2.5 text-sm"
-                            >
-                                <RefreshCw size={16} />
-                                Refresh
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className="mt-5 space-y-4">
-                        {loading ? (
-                            <div className="rounded-[24px] border frint-border p-8 text-center text-sm font-bold frint-muted">
-                                Loading campaigns...
-                            </div>
-                        ) : filteredCampaigns.length === 0 ? (
-                            <EmptyState
-                                title="No campaigns found"
-                                message="Create the first Frint campaign from the form."
-                            />
-                        ) : (
-                            filteredCampaigns.map((campaign) => {
-                                const campaignAssignments = getCampaignAssignments(campaign.id)
-                                const progress = getCampaignProgress(campaign.id)
-                                const progressPercent = Number(progress?.progress_percent || 0)
-
-                                return (
-                                    <div key={campaign.id} className="rounded-[26px] border frint-border p-5">
-                                        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                                            <div>
-                                                <div className="flex flex-wrap items-center gap-2">
-                                                    <h3 className="text-lg font-black text-[var(--frint-text)]">
-                                                        {campaign.title}
-                                                    </h3>
-                                                    <StatusBadge status={campaign.status} />
-                                                </div>
-
-                                                <p className="mt-2 text-sm font-bold frint-muted">
-                                                    {getLabel(campaignTypes, campaign.type)} • {getLabel(actionModes, campaign.action_mode)}
-                                                </p>
-
-                                                <div className="mt-3 flex flex-wrap gap-2">
-                                                    <span className="rounded-full bg-[var(--frint-soft-card)] px-3 py-1 text-xs font-black frint-muted">
-                                                        {getLabel(audienceTypes, campaign.audience_type)}
-                                                    </span>
-
-                                                    <span className="rounded-full bg-[var(--frint-soft-card)] px-3 py-1 text-xs font-black frint-muted">
-                                                        {getLabel(formTypes, campaign.form_type)}
-                                                    </span>
-
-                                                    <span className="rounded-full bg-[var(--frint-soft-card)] px-3 py-1 text-xs font-black frint-muted">
-                                                        {campaign.priority}
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex flex-col gap-2 sm:flex-row">
-                                                <Link
-                                                    to={`/admin/campaigns/${campaign.id}`}
-                                                    className="frint-secondary-btn flex items-center justify-center gap-2 px-4 py-2 text-sm"
-                                                >
-                                                    View details
-                                                </Link>
-
-                                                <select
-                                                    value={campaign.status || 'draft'}
-                                                    onChange={(e) => updateCampaignStatus(campaign.id, e.target.value)}
-                                                    className="rounded-2xl border frint-border bg-[var(--frint-card)] px-3 py-2 text-sm font-bold outline-none"
-                                                >
-                                                    <option value="draft">Draft</option>
-                                                    <option value="active">Active</option>
-                                                    <option value="paused">Paused</option>
-                                                    <option value="completed">Completed</option>
-                                                </select>
-                                            </div>
-                                        </div>
-
-                                        <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                                            <div className="rounded-[20px] bg-[var(--frint-soft-card)] p-4">
-                                                <div className="flex items-center gap-2 text-[#0060f8]">
-                                                    <Target size={17} />
-                                                    <p className="text-sm font-black">Progress</p>
-                                                </div>
-
-                                                <p className="mt-2 text-2xl font-black text-[var(--frint-text)]">
-                                                    {progress?.total_leads || 0}/{campaign.target_count || 0}
-                                                </p>
-                                            </div>
-
-                                            <div className="rounded-[20px] bg-[var(--frint-soft-card)] p-4">
-                                                <div className="flex items-center gap-2 text-[#0060f8]">
-                                                    <Users size={17} />
-                                                    <p className="text-sm font-black">Assigned</p>
-                                                </div>
-
-                                                <p className="mt-2 text-2xl font-black text-[var(--frint-text)]">
-                                                    {campaignAssignments.length}
-                                                </p>
-                                            </div>
-
-                                            <div className="rounded-[20px] bg-[var(--frint-soft-card)] p-4">
-                                                <p className="text-sm font-black frint-muted">
-                                                    Converted
-                                                </p>
-
-                                                <p className="mt-2 text-2xl font-black text-[var(--frint-text)]">
-                                                    {progress?.converted_leads || 0}
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        <div className="mt-4 h-[5px] overflow-hidden rounded-full bg-[var(--frint-soft-card)]">
-                                            <div
-                                                className="h-full rounded-full bg-[#0060f8]"
-                                                style={{ width: `${Math.min(progressPercent, 100)}%` }}
-                                            />
-                                        </div>
-                                    </div>
-                                )
-                            })
-                        )}
-                    </div>
                 </section>
             </div>
         </DashboardLayout>

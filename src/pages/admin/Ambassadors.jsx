@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, Fragment } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { RefreshCw, Search, UserCheck } from 'lucide-react'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import StatusBadge from '../../components/ui/StatusBadge'
@@ -6,6 +6,99 @@ import EmptyState from '../../components/ui/EmptyState'
 import { supabase } from '../../lib/supabase'
 import CreateAmbassadorBox from '../../components/admin/CreateAmbassadorBox'
 import AmbassadorAccountActions from '../../components/admin/AmbassadorAccountActions'
+
+function AmbassadorMobileCard({ profile, colleges, saving, onUpdate, onReload }) {
+    return (
+        <article className="rounded-[20px] border frint-border bg-[var(--frint-card)] p-4">
+            <div className="flex items-start gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--frint-accent-soft)] text-[var(--frint-blue)]">
+                    <UserCheck size={19} />
+                </div>
+
+                <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                            <h3 className="truncate text-[16px] font-semibold text-[var(--frint-text)]">
+                                {profile.full_name || 'Unnamed user'}
+                            </h3>
+                            <p className="mt-0.5 truncate text-sm font-medium frint-muted">
+                                {profile.email}
+                            </p>
+                        </div>
+
+                        <StatusBadge status={profile.status} />
+                    </div>
+
+                    <p className="mt-2 truncate text-sm frint-muted">
+                        {profile.colleges?.name || 'No college'}
+                    </p>
+                </div>
+            </div>
+
+            <div className="mt-4 grid gap-2">
+                <select
+                    value={profile.role || ''}
+                    onChange={(e) =>
+                        onUpdate(profile.id, {
+                            role: e.target.value || null,
+                        })
+                    }
+                    className="frint-input"
+                    disabled={saving}
+                >
+                    <option value="">No role</option>
+                    <option value="admin">Admin</option>
+                    <option value="ambassador">Ambassador</option>
+                </select>
+
+                <select
+                    value={profile.college_id || ''}
+                    onChange={(e) =>
+                        onUpdate(profile.id, {
+                            college_id: e.target.value || null,
+                        })
+                    }
+                    className="frint-input"
+                    disabled={saving}
+                >
+                    <option value="">No college</option>
+                    {colleges.map((college) => (
+                        <option key={college.id} value={college.id}>
+                            {college.name}
+                        </option>
+                    ))}
+                </select>
+
+                <select
+                    value={profile.status || 'pending'}
+                    onChange={(e) =>
+                        onUpdate(profile.id, {
+                            status: e.target.value,
+                        })
+                    }
+                    className="frint-input"
+                    disabled={saving}
+                >
+                    <option value="pending">Pending</option>
+                    <option value="active">Active</option>
+                    <option value="suspended">Suspended</option>
+                </select>
+            </div>
+
+            {profile.role === 'ambassador' && (
+                <details className="mt-3 rounded-2xl bg-[var(--frint-soft-card)] p-3">
+                    <summary className="cursor-pointer text-sm font-semibold text-[var(--frint-text)]">
+                        Account controls
+                    </summary>
+
+                    <div className="mt-3 min-w-0 overflow-hidden [&_button]:w-full [&_input]:w-full">
+                        <AmbassadorAccountActions ambassador={profile} onUpdated={onReload} />
+                    </div>
+                </details>
+            )}
+        </article>
+    )
+}
 
 export default function Ambassadors() {
     const [profiles, setProfiles] = useState([])
@@ -102,193 +195,200 @@ export default function Ambassadors() {
             role="admin"
             title="Ambassadors"
             subtitle="Assign roles, colleges, and account status"
-
         >
-
-            <CreateAmbassadorBox onCreated={loadData} />
-            <section className="frint-card rounded-[30px] p-5">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                    <div>
-                        <h2 className="text-xl font-black text-[var(--frint-text)]">
-                            Ambassador accounts
-                        </h2>
-                        <p className="mt-1 text-sm frint-muted">
-                            Manage users created in Supabase Auth
-                        </p>
-                    </div>
-
-                    <div className="flex flex-col gap-3 sm:flex-row">
-                        <div className="flex items-center gap-2 rounded-full border frint-border bg-[var(--frint-card)] px-4 py-2.5">
-                            <Search size={17} className="frint-muted" />
-                            <input
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                placeholder="Search user"
-                                className="w-full bg-transparent text-sm font-semibold outline-none placeholder:text-slate-400 sm:w-64"
-                            />
-                        </div>
-
-                        <button
-                            onClick={loadData}
-                            className="frint-secondary-btn flex items-center justify-center gap-2 px-5 py-2.5 text-sm"
-                        >
-                            <RefreshCw size={16} />
-                            Refresh
-                        </button>
-                    </div>
+            <div className="space-y-4">
+                <div className="[&_section]:rounded-[24px] [&_section]:p-4 sm:[&_section]:p-5">
+                    <CreateAmbassadorBox onCreated={loadData} />
                 </div>
 
-                {message && (
-                    <div className="mt-5 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
-                        {message}
-                    </div>
-                )}
+                <section className="frint-card rounded-[24px] p-4 sm:p-5">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                        <div>
+                            <h2 className="text-lg font-semibold text-[var(--frint-text)]">
+                                Ambassador accounts
+                            </h2>
+                            <p className="mt-0.5 text-sm frint-muted">
+                                {filteredProfiles.length} users
+                            </p>
+                        </div>
 
-                <div className="mt-5 rounded-[24px] border frint-border">
+                        <div className="grid gap-2 sm:flex sm:items-center">
+                            <div className="flex min-w-0 items-center gap-2 rounded-full border frint-border bg-[var(--frint-card)] px-3 py-2">
+                                <Search size={16} className="shrink-0 frint-muted" />
+                                <input
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    placeholder="Search user"
+                                    className="min-w-0 flex-1 bg-transparent text-sm font-medium outline-none placeholder:text-slate-400 sm:w-64"
+                                />
+                            </div>
+
+                            <button
+                                onClick={loadData}
+                                className="frint-secondary-btn flex items-center justify-center gap-2 px-4 py-2 text-sm"
+                            >
+                                <RefreshCw size={15} />
+                                Refresh
+                            </button>
+                        </div>
+                    </div>
+
+                    {message && (
+                        <div className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+                            {message}
+                        </div>
+                    )}
+
                     {loading ? (
-                        <div className="p-8 text-center text-sm font-bold frint-muted">
+                        <div className="mt-4 rounded-[20px] border frint-border p-6 text-center text-sm font-medium frint-muted">
                             Loading ambassadors...
                         </div>
                     ) : filteredProfiles.length === 0 ? (
-                        <div className="p-5">
+                        <div className="mt-4">
                             <EmptyState
                                 title="No users found"
-                                message="Create users in Supabase Auth first, then assign their role here."
+                                message="Create an ambassador account, then assign role and college."
                             />
                         </div>
                     ) : (
-                        <div className="overflow-x-auto">
-                            <table className="min-w-[980px] w-full text-left">
-                                <thead className="border-b frint-border bg-[var(--frint-soft-card)]">
-                                    <tr>
-                                        <th className="px-4 py-4 text-xs font-black uppercase tracking-wide frint-muted">
-                                            User
-                                        </th>
-                                        <th className="px-4 py-4 text-xs font-black uppercase tracking-wide frint-muted">
-                                            Role
-                                        </th>
-                                        <th className="px-4 py-4 text-xs font-black uppercase tracking-wide frint-muted">
-                                            College
-                                        </th>
-                                        <th className="px-4 py-4 text-xs font-black uppercase tracking-wide frint-muted">
-                                            Status
-                                        </th>
-                                        <th className="px-4 py-4 text-xs font-black uppercase tracking-wide frint-muted">
-                                            Action
-                                        </th>
-                                    </tr>
-                                </thead>
+                        <>
+                            <div className="mt-4 grid gap-3 md:hidden">
+                                {filteredProfiles.map((profile) => (
+                                    <AmbassadorMobileCard
+                                        key={profile.id}
+                                        profile={profile}
+                                        colleges={colleges}
+                                        saving={savingId === profile.id}
+                                        onUpdate={updateProfile}
+                                        onReload={loadData}
+                                    />
+                                ))}
+                            </div>
 
-                                <tbody>
-                                    {filteredProfiles.map((profile) => {
-                                        const saving = savingId === profile.id
+                            <div className="mt-4 hidden overflow-hidden rounded-[22px] border frint-border md:block">
+                                <div className="frint-table-wrap">
+                                    <table className="w-full min-w-[920px] text-left text-sm">
+                                        <thead className="border-b frint-border bg-[var(--frint-soft-card)]">
+                                            <tr>
+                                                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide frint-muted">User</th>
+                                                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide frint-muted">Role</th>
+                                                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide frint-muted">College</th>
+                                                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide frint-muted">Status</th>
+                                                <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide frint-muted">Action</th>
+                                            </tr>
+                                        </thead>
 
-                                        return (
-                                            <Fragment key={profile.id}>
-                                                <tr className="border-b frint-border">
-                                                    <td className="px-4 py-4">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-[#0060f8]">
-                                                                <UserCheck size={20} />
-                                                            </div>
+                                        <tbody>
+                                            {filteredProfiles.map((profile) => {
+                                                const saving = savingId === profile.id
 
-                                                            <div>
-                                                                <p className="font-black text-[var(--frint-text)]">
-                                                                    {profile.full_name || 'Unnamed user'}
-                                                                </p>
-                                                                <p className="mt-1 text-sm frint-muted">
-                                                                    {profile.email}
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                    </td>
+                                                return (
+                                                    <Fragment key={profile.id}>
+                                                        <tr className="border-b frint-border">
+                                                            <td className="px-4 py-3">
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--frint-accent-soft)] text-[var(--frint-blue)]">
+                                                                        <UserCheck size={18} />
+                                                                    </div>
 
-                                                    <td className="px-4 py-4">
-                                                        <select
-                                                            value={profile.role || ''}
-                                                            onChange={(e) =>
-                                                                updateProfile(profile.id, {
-                                                                    role: e.target.value || null,
-                                                                })
-                                                            }
-                                                            className="rounded-2xl border frint-border bg-[var(--frint-card)] px-3 py-2 text-sm font-bold outline-none"
-                                                            disabled={saving}
-                                                        >
-                                                            <option value="">No role</option>
-                                                            <option value="admin">Admin</option>
-                                                            <option value="ambassador">Ambassador</option>
-                                                        </select>
-                                                    </td>
+                                                                    <div className="min-w-0">
+                                                                        <p className="truncate font-semibold text-[var(--frint-text)]">
+                                                                            {profile.full_name || 'Unnamed user'}
+                                                                        </p>
+                                                                        <p className="mt-0.5 truncate text-sm frint-muted">
+                                                                            {profile.email}
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
 
-                                                    <td className="px-4 py-4">
-                                                        <select
-                                                            value={profile.college_id || ''}
-                                                            onChange={(e) =>
-                                                                updateProfile(profile.id, {
-                                                                    college_id: e.target.value || null,
-                                                                })
-                                                            }
-                                                            className="max-w-[260px] rounded-2xl border frint-border bg-[var(--frint-card)] px-3 py-2 text-sm font-bold outline-none"
-                                                            disabled={saving}
-                                                        >
-                                                            <option value="">No college</option>
-                                                            {colleges.map((college) => (
-                                                                <option key={college.id} value={college.id}>
-                                                                    {college.name}
-                                                                </option>
-                                                            ))}
-                                                        </select>
-                                                    </td>
+                                                            <td className="px-4 py-3">
+                                                                <select
+                                                                    value={profile.role || ''}
+                                                                    onChange={(e) =>
+                                                                        updateProfile(profile.id, {
+                                                                            role: e.target.value || null,
+                                                                        })
+                                                                    }
+                                                                    className="rounded-2xl border frint-border bg-[var(--frint-card)] px-3 py-2 text-sm font-medium outline-none"
+                                                                    disabled={saving}
+                                                                >
+                                                                    <option value="">No role</option>
+                                                                    <option value="admin">Admin</option>
+                                                                    <option value="ambassador">Ambassador</option>
+                                                                </select>
+                                                            </td>
 
-                                                    <td className="px-4 py-4">
-                                                        <StatusBadge status={profile.status} />
-                                                    </td>
+                                                            <td className="px-4 py-3">
+                                                                <select
+                                                                    value={profile.college_id || ''}
+                                                                    onChange={(e) =>
+                                                                        updateProfile(profile.id, {
+                                                                            college_id: e.target.value || null,
+                                                                        })
+                                                                    }
+                                                                    className="max-w-[230px] rounded-2xl border frint-border bg-[var(--frint-card)] px-3 py-2 text-sm font-medium outline-none"
+                                                                    disabled={saving}
+                                                                >
+                                                                    <option value="">No college</option>
+                                                                    {colleges.map((college) => (
+                                                                        <option key={college.id} value={college.id}>
+                                                                            {college.name}
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+                                                            </td>
 
-                                                    <td className="px-4 py-4">
-                                                        <select
-                                                            value={profile.status || 'pending'}
-                                                            onChange={(e) =>
-                                                                updateProfile(profile.id, {
-                                                                    status: e.target.value,
-                                                                })
-                                                            }
-                                                            className="rounded-2xl border frint-border bg-[var(--frint-card)] px-3 py-2 text-sm font-bold outline-none"
-                                                            disabled={saving}
-                                                        >
-                                                            <option value="pending">Pending</option>
-                                                            <option value="active">Active</option>
-                                                            <option value="suspended">Suspended</option>
-                                                        </select>
-                                                    </td>
-                                                </tr>
-                                                {profile.role === 'ambassador' && (
-                                                    <tr className="border-b frint-border bg-[var(--frint-soft-card)]/30">
-                                                        <td colSpan={5} className="px-4 pb-4 pt-1">
-                                                            <AmbassadorAccountActions
-                                                                ambassador={profile}
-                                                                onUpdated={loadData}
-                                                            />
-                                                        </td>
-                                                    </tr>
-                                                )}
-                                            </Fragment>
-                                        )
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
+                                                            <td className="px-4 py-3">
+                                                                <StatusBadge status={profile.status} />
+                                                            </td>
+
+                                                            <td className="px-4 py-3">
+                                                                <select
+                                                                    value={profile.status || 'pending'}
+                                                                    onChange={(e) =>
+                                                                        updateProfile(profile.id, {
+                                                                            status: e.target.value,
+                                                                        })
+                                                                    }
+                                                                    className="rounded-2xl border frint-border bg-[var(--frint-card)] px-3 py-2 text-sm font-medium outline-none"
+                                                                    disabled={saving}
+                                                                >
+                                                                    <option value="pending">Pending</option>
+                                                                    <option value="active">Active</option>
+                                                                    <option value="suspended">Suspended</option>
+                                                                </select>
+                                                            </td>
+                                                        </tr>
+
+                                                        {profile.role === 'ambassador' && (
+                                                            <tr className="border-b frint-border bg-[var(--frint-soft-card)]/30">
+                                                                <td colSpan={5} className="px-4 pb-4 pt-1">
+                                                                    <details>
+                                                                        <summary className="cursor-pointer text-sm font-semibold text-[var(--frint-text)]">
+                                                                            Account controls
+                                                                        </summary>
+                                                                        <div className="mt-3">
+                                                                            <AmbassadorAccountActions
+                                                                                ambassador={profile}
+                                                                                onUpdated={loadData}
+                                                                            />
+                                                                        </div>
+                                                                    </details>
+                                                                </td>
+                                                            </tr>
+                                                        )}
+                                                    </Fragment>
+                                                )
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </>
                     )}
-                </div>
-
-                <div className="mt-5 rounded-[22px] bg-[var(--frint-soft-card)] p-4">
-                    <p className="text-sm font-bold text-[var(--frint-text)]">
-                        Current safe account flow
-                    </p>
-                    <p className="mt-1 text-sm frint-muted">
-                        Create user in Supabase Auth, then assign role and college from this page. Secure in-app account creation will be added using a server function later.
-                    </p>
-                </div>
-            </section>
+                </section>
+            </div>
         </DashboardLayout>
     )
 }
