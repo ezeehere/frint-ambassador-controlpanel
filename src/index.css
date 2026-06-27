@@ -2,23 +2,20 @@
 
 :root {
   --frint-blue: #0060f8;
-  --frint-accent: #6cc4fb;
-  --frint-accent-soft: rgba(108, 196, 251, 0.14);
+  --frint-accent: #68c3fb;
+  --frint-accent-soft: rgba(104, 195, 251, 0.14);
+  --frint-danger: #ef4444;
 
   --frint-bg: #f7f9fc;
   --frint-card: #ffffff;
-  --frint-soft-card: #f4f7fb;
-  --frint-text: #111827;
+  --frint-soft-card: #f3f6fa;
+  --frint-text: #101828;
   --frint-muted: #667085;
-  --frint-border: #e5edf6;
+  --frint-border: #e3ebf5;
   --frint-input: #ffffff;
-  --frint-hover: #f1f7ff;
+  --frint-hover: #f0f7ff;
 
-  --frint-radius-lg: 24px;
-  --frint-radius-md: 18px;
-
-  --frint-shadow: 0 18px 50px rgba(15, 23, 42, 0.045);
-  --frint-shadow-soft: 0 8px 26px rgba(15, 23, 42, 0.035);
+  --frint-shadow-soft: 0 10px 30px rgba(15, 23, 42, 0.045);
 }
 
 [data-theme='dark'] {
@@ -28,10 +25,8 @@
   --frint-text: #f5f7fa;
   --frint-muted: #a3adbd;
   --frint-border: #303030;
-  --frint-input: #1c1c1c;
+  --frint-input: #111111;
   --frint-hover: #242424;
-
-  --frint-shadow: none;
   --frint-shadow-soft: none;
 }
 
@@ -39,18 +34,21 @@
   box-sizing: border-box;
 }
 
-html {
+html,
+body,
+#root {
   width: 100%;
   min-height: 100%;
   overflow-x: hidden;
+}
+
+html {
   -webkit-text-size-adjust: 100%;
 }
 
 body {
   margin: 0;
-  width: 100%;
   min-height: 100vh;
-  overflow-x: hidden;
   background: var(--frint-bg);
   color: var(--frint-text);
   font-family:
@@ -63,13 +61,9 @@ body {
     Arial,
     sans-serif;
   font-size: 14.5px;
+  font-weight: 500;
   line-height: 1.55;
   letter-spacing: -0.015em;
-  font-weight: 500;
-}
-
-[data-theme='dark'] body {
-  background: #08090b;
 }
 
 button,
@@ -85,11 +79,13 @@ button {
 
 button:disabled {
   cursor: not-allowed;
+  opacity: 0.65;
 }
 
 input,
 textarea,
 select {
+  min-width: 0;
   color: var(--frint-text);
 }
 
@@ -100,7 +96,7 @@ textarea::placeholder {
 
 [data-theme='dark'] input::placeholder,
 [data-theme='dark'] textarea::placeholder {
-  color: #757575;
+  color: #737373;
 }
 
 a {
@@ -108,11 +104,17 @@ a {
   text-decoration: none;
 }
 
-::selection {
-  background: rgba(108, 196, 251, 0.25);
+img,
+video,
+svg {
+  max-width: 100%;
 }
 
-/* Reduce the over-heavy Tailwind typography used across pages */
+::selection {
+  background: rgba(104, 195, 251, 0.24);
+}
+
+/* Make existing pages calmer without editing every class immediately */
 .frint-page .font-black {
   font-weight: 700;
 }
@@ -127,8 +129,16 @@ a {
 
 .frint-page {
   min-height: 100vh;
-  background: transparent;
+  overflow-x: hidden;
+  background: var(--frint-bg);
   color: var(--frint-text);
+}
+
+.frint-page,
+.frint-page main,
+.frint-page section,
+.frint-page div {
+  min-width: 0;
 }
 
 .frint-card {
@@ -161,10 +171,7 @@ a {
   font-weight: 650;
   letter-spacing: -0.01em;
   box-shadow: none;
-  transition:
-    transform 0.16s ease,
-    background 0.16s ease,
-    opacity 0.16s ease;
+  transition: transform 0.16s ease, background 0.16s ease, opacity 0.16s ease;
 }
 
 .frint-primary-btn:hover {
@@ -183,52 +190,71 @@ a {
   color: var(--frint-text);
   font-weight: 650;
   letter-spacing: -0.01em;
-  transition:
-    background 0.16s ease,
-    border-color 0.16s ease,
-    transform 0.16s ease;
+  transition: background 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
 }
 
 .frint-secondary-btn:hover {
   background: var(--frint-hover);
-  border-color: rgba(108, 196, 251, 0.45);
+  border-color: rgba(104, 195, 251, 0.45);
 }
 
 .frint-secondary-btn:active {
   transform: translateY(1px);
 }
 
+.frint-danger-btn {
+  min-height: 40px;
+  border: 1px solid rgba(239, 68, 68, 0.28);
+  border-radius: 999px;
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  font-weight: 700;
+}
+
 .frint-input {
   width: 100%;
-  min-height: 44px;
+  min-height: 42px;
   border: 1px solid var(--frint-border);
-  border-radius: 16px;
+  border-radius: 15px;
   background: var(--frint-input);
   color: var(--frint-text);
-  padding: 0.7rem 0.95rem;
+  padding: 0.68rem 0.95rem;
   font-size: 0.9rem;
   font-weight: 500;
   outline: none;
-  transition:
-    border-color 0.16s ease,
-    box-shadow 0.16s ease,
-    background 0.16s ease;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
 }
 
 .frint-input:focus {
-  border-color: rgba(108, 196, 251, 0.75);
-  box-shadow: 0 0 0 4px rgba(108, 196, 251, 0.13);
+  border-color: rgba(104, 195, 251, 0.75);
+  box-shadow: 0 0 0 4px rgba(104, 195, 251, 0.13);
+}
+
+.frint-field-label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.86rem;
+  font-weight: 650;
+  color: var(--frint-text);
+}
+
+.frint-field-help {
+  margin-top: 0.35rem;
+  color: var(--frint-muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.45;
 }
 
 .frint-kicker {
   display: inline-flex;
   align-items: center;
   width: fit-content;
-  border: 1px solid rgba(108, 196, 251, 0.28);
+  border: 1px solid rgba(104, 195, 251, 0.28);
   border-radius: 999px;
-  background: rgba(108, 196, 251, 0.12);
+  background: rgba(104, 195, 251, 0.12);
   color: var(--frint-accent);
-  padding: 0.35rem 0.7rem;
+  padding: 0.32rem 0.68rem;
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.01em;
@@ -236,12 +262,12 @@ a {
 
 .frint-icon-chip {
   display: inline-flex;
-  height: 2.45rem;
-  width: 2.45rem;
+  height: 2.35rem;
+  width: 2.35rem;
   align-items: center;
   justify-content: center;
-  border-radius: 1rem;
-  background: rgba(108, 196, 251, 0.13);
+  border-radius: 0.95rem;
+  background: rgba(104, 195, 251, 0.13);
   color: var(--frint-accent);
 }
 
@@ -265,7 +291,6 @@ a {
   border-radius: 999px;
   background: transparent;
   color: var(--frint-muted);
-  cursor: pointer;
   transition: 0.16s ease;
 }
 
@@ -298,49 +323,6 @@ a {
   background: rgba(148, 163, 184, 0.35);
 }
 
-@media (max-width: 640px) {
-  body {
-    font-size: 14px;
-  }
-
-  .frint-card {
-    box-shadow: none;
-  }
-
-  .frint-primary-btn,
-  .frint-secondary-btn {
-    min-height: 42px;
-  }
-
-  .frint-input {
-    min-height: 46px;
-    border-radius: 15px;
-  }
-}
-
-/* Mobile layout safety */
-#root {
-  width: 100%;
-  min-height: 100vh;
-  overflow-x: hidden;
-}
-
-.frint-page,
-.frint-page main,
-.frint-page section,
-.frint-page div {
-  min-width: 0;
-}
-
-.frint-page img,
-.frint-page video {
-  max-width: 100%;
-}
-
-.frint-page table {
-  border-collapse: collapse;
-}
-
 .frint-table-wrap {
   width: 100%;
   max-width: 100%;
@@ -353,106 +335,99 @@ a {
   gap: 0.75rem;
 }
 
-.frint-compact-card {
-  border: 1px solid var(--frint-border);
-  background: var(--frint-card);
-  color: var(--frint-text);
+.frint-chiclet-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+@media (min-width: 768px) {
+  .frint-chiclet-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 768px) {
+  body {
+    font-size: 14px;
+  }
+
   .frint-card {
-    border-radius: 22px !important;
+    border-radius: 20px !important;
+    box-shadow: none;
   }
 
   .frint-soft-card {
-    border-radius: 18px !important;
+    border-radius: 17px !important;
   }
 
   .frint-page h1 {
-    font-size: 1.35rem;
+    font-size: 1.28rem;
   }
 
   .frint-page h2 {
-    font-size: 1.15rem;
+    font-size: 1.08rem;
   }
 
   .frint-page h3 {
-    font-size: 1rem;
+    font-size: 0.98rem;
   }
 
   .frint-page input,
   .frint-page select,
   .frint-page textarea {
-    min-height: 44px;
-    border-radius: 16px !important;
-    font-size: 0.92rem;
+    min-height: 42px;
+    border-radius: 14px !important;
+    font-size: 0.9rem;
   }
 
   .frint-page textarea {
-    min-height: 88px;
+    min-height: 84px;
   }
 
   .frint-page button {
-    min-height: 40px;
+    min-height: 38px;
   }
 
   .frint-page table {
     min-width: 680px;
   }
 
-  .frint-page .rounded-\[30px\] {
-    border-radius: 22px !important;
-  }
-
+  .frint-page .rounded-\[30px\],
   .frint-page .rounded-\[28px\] {
-    border-radius: 22px !important;
-  }
-
-  .frint-page .rounded-\[26px\] {
     border-radius: 20px !important;
   }
 
+  .frint-page .rounded-\[26px\],
   .frint-page .rounded-\[24px\] {
     border-radius: 18px !important;
   }
 
   .frint-page .p-8 {
-    padding: 1.25rem !important;
-  }
-
-  .frint-page .p-7 {
     padding: 1.15rem !important;
   }
 
+  .frint-page .p-7,
   .frint-page .p-6 {
     padding: 1rem !important;
   }
 
   .frint-page .p-5 {
-    padding: 0.95rem !important;
+    padding: 0.9rem !important;
   }
 
-  .frint-page .gap-6 {
-    gap: 1rem !important;
-  }
-
+  .frint-page .gap-6,
   .frint-page .gap-5 {
     gap: 0.9rem !important;
   }
 
-  .frint-page .mt-6 {
-    margin-top: 1rem !important;
-  }
-
+  .frint-page .mt-6,
   .frint-page .mt-5 {
     margin-top: 0.9rem !important;
   }
 
-  .frint-page .space-y-6> :not([hidden])~ :not([hidden]) {
-    margin-top: 1rem !important;
-  }
-
+  .frint-page .space-y-6> :not([hidden])~ :not([hidden]),
   .frint-page .space-y-5> :not([hidden])~ :not([hidden]) {
-    margin-top: 0.85rem !important;
+    margin-top: 0.9rem !important;
   }
 }

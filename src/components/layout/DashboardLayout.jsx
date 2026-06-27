@@ -1,11 +1,11 @@
-import { useMemo, useState } from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
-import { LogOut, Menu, X } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { LogOut, Menu, MoreHorizontal, Settings, UserRound, X } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import ThemeToggle from '../ThemeToggle'
 import { adminMenuItems, ambassadorMenuItems } from '../../config/menuItems'
 
-const mobilePriorityLabels = ['Dashboard', 'Campaigns', 'Leads', 'Tasks']
+const mobilePriorityLabels = ['Dashboard', 'Campaigns', 'Leads']
 
 export default function DashboardLayout({
     role = 'admin',
@@ -13,18 +13,52 @@ export default function DashboardLayout({
     subtitle,
     children,
 }) {
-    const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+    const [menuOpen, setMenuOpen] = useState(false)
+    const [profileMenuOpen, setProfileMenuOpen] = useState(false)
+    const [profile, setProfile] = useState(null)
     const location = useLocation()
+    const navigate = useNavigate()
+    const profileMenuRef = useRef(null)
 
     const menuItems = role === 'admin' ? adminMenuItems : ambassadorMenuItems
 
     const mobilePrimaryItems = useMemo(() => {
-        const preferred = menuItems.filter((item) =>
-            mobilePriorityLabels.includes(item.label)
-        )
-
-        return preferred.length >= 3 ? preferred.slice(0, 4) : menuItems.slice(0, 4)
+        return menuItems
+            .filter((item) => mobilePriorityLabels.includes(item.label))
+            .slice(0, 3)
     }, [menuItems])
+
+    useEffect(() => {
+        const loadProfile = async () => {
+            const {
+                data: { user },
+            } = await supabase.auth.getUser()
+
+            if (!user) return
+
+            const { data } = await supabase
+                .from('profiles')
+                .select('full_name, email, role')
+                .eq('id', user.id)
+                .maybeSingle()
+
+            setProfile(data || { email: user.email, role })
+        }
+
+        loadProfile()
+    }, [role])
+
+    useEffect(() => {
+        const closeProfileMenu = (event) => {
+            if (!profileMenuRef.current) return
+            if (!profileMenuRef.current.contains(event.target)) {
+                setProfileMenuOpen(false)
+            }
+        }
+
+        document.addEventListener('mousedown', closeProfileMenu)
+        return () => document.removeEventListener('mousedown', closeProfileMenu)
+    }, [])
 
     const logout = async () => {
         await supabase.auth.signOut()
@@ -32,6 +66,13 @@ export default function DashboardLayout({
     }
 
     const roleLabel = role === 'admin' ? 'Admin workspace' : 'Ambassador workspace'
+    const displayName = profile?.full_name || profile?.email || 'Frint user'
+    const initials = displayName
+        .split(' ')
+        .map((part) => part[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase()
 
     const SidebarContent = () => (
         <div className="flex h-full flex-col">
@@ -62,7 +103,7 @@ export default function DashboardLayout({
                         <NavLink
                             key={item.path}
                             to={item.path}
-                            onClick={() => setMobileMenuOpen(false)}
+                            onClick={() => setMenuOpen(false)}
                             className={({ isActive }) =>
                                 [
                                     'flex items-center gap-3 rounded-[15px] px-3 py-2.5 text-[14px] font-semibold transition',
@@ -89,7 +130,7 @@ export default function DashboardLayout({
 
                 <button
                     onClick={logout}
-                    className="frint-secondary-btn flex w-full items-center justify-center gap-2 px-4 py-2 text-sm"
+                    className="frint-danger-btn flex w-full items-center justify-center gap-2 px-4 py-2 text-sm"
                 >
                     <LogOut size={15} />
                     Logout
@@ -107,13 +148,13 @@ export default function DashboardLayout({
                     </div>
                 </aside>
 
-                <div className="min-w-0 flex-1 overflow-x-hidden pb-[74px] lg:pb-0">
+                <div className="min-w-0 flex-1 overflow-x-hidden pb-[72px] lg:pb-0">
                     <header className="sticky top-0 z-30 border-b frint-border bg-[var(--frint-bg)]/92 backdrop-blur-xl">
                         <div className="flex min-h-[58px] items-center justify-between gap-3 px-4 lg:min-h-[68px] lg:px-6">
                             <div className="flex min-w-0 items-center gap-3">
                                 <button
                                     type="button"
-                                    onClick={() => setMobileMenuOpen(true)}
+                                    onClick={() => setMenuOpen(true)}
                                     className="frint-secondary-btn flex h-9 w-9 shrink-0 items-center justify-center p-0 lg:hidden"
                                     aria-label="Open menu"
                                 >
@@ -121,28 +162,87 @@ export default function DashboardLayout({
                                 </button>
 
                                 <div className="min-w-0">
-                                    <h1 className="truncate text-[22px] font-semibold leading-tight tracking-[-0.04em] text-[var(--frint-text)] lg:text-[25px]">
+                                    <h1 className="truncate text-[21px] font-semibold leading-tight tracking-[-0.04em] text-[var(--frint-text)] lg:text-[25px]">
                                         {title}
                                     </h1>
 
                                     {subtitle && (
-                                        <p className="mt-0.5 max-w-[70vw] truncate text-[13px] font-medium frint-muted lg:max-w-none">
+                                        <p className="mt-0.5 max-w-[60vw] truncate text-[13px] font-medium frint-muted lg:max-w-none">
                                             {subtitle}
                                         </p>
                                     )}
                                 </div>
                             </div>
 
-                            <div className="hidden items-center gap-3 lg:flex">
-                                <ThemeToggle />
+                            <div className="flex shrink-0 items-center gap-2">
+                                <button
+                                    onClick={logout}
+                                    className="frint-danger-btn hidden items-center gap-2 px-3 py-2 text-xs sm:flex lg:hidden"
+                                >
+                                    <LogOut size={14} />
+                                    Logout
+                                </button>
 
                                 <button
                                     onClick={logout}
-                                    className="frint-secondary-btn flex items-center gap-2 px-4 py-2 text-sm"
+                                    className="frint-danger-btn flex h-9 w-9 items-center justify-center p-0 sm:hidden"
+                                    aria-label="Logout"
                                 >
                                     <LogOut size={15} />
-                                    Logout
                                 </button>
+
+                                <div className="hidden items-center gap-3 lg:flex">
+                                    <ThemeToggle />
+
+                                    <div ref={profileMenuRef} className="relative">
+                                        <button
+                                            type="button"
+                                            onClick={() => setProfileMenuOpen((current) => !current)}
+                                            className="frint-secondary-btn flex items-center gap-2 px-2 py-1.5 pr-3 text-sm"
+                                        >
+                                            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--frint-accent-soft)] text-xs font-bold text-[var(--frint-text)]">
+                                                {initials || 'F'}
+                                            </span>
+                                            <span className="max-w-[120px] truncate">{displayName}</span>
+                                        </button>
+
+                                        {profileMenuOpen && (
+                                            <div className="absolute right-0 top-12 w-64 rounded-[20px] border frint-border bg-[var(--frint-card)] p-2 shadow-xl">
+                                                <div className="px-3 py-3">
+                                                    <p className="truncate text-sm font-semibold text-[var(--frint-text)]">
+                                                        {displayName}
+                                                    </p>
+                                                    <p className="mt-0.5 text-xs capitalize frint-muted">
+                                                        {roleLabel}
+                                                    </p>
+                                                </div>
+
+                                                <div className="my-1 border-t frint-border" />
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setProfileMenuOpen(false)
+                                                        navigate(role === 'admin' ? '/admin/settings' : '/ambassador/profile')
+                                                    }}
+                                                    className="flex w-full items-center gap-2 rounded-2xl px-3 py-2.5 text-left text-sm font-semibold text-[var(--frint-text)] hover:bg-[var(--frint-hover)]"
+                                                >
+                                                    <Settings size={15} />
+                                                    Settings
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={logout}
+                                                    className="mt-1 flex w-full items-center gap-2 rounded-2xl px-3 py-2.5 text-left text-sm font-semibold text-red-500 hover:bg-red-500/10"
+                                                >
+                                                    <LogOut size={15} />
+                                                    Logout
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </header>
@@ -155,18 +255,18 @@ export default function DashboardLayout({
                 </div>
             </div>
 
-            {mobileMenuOpen && (
+            {menuOpen && (
                 <div className="fixed inset-0 z-50 lg:hidden">
                     <button
                         className="absolute inset-0 bg-black/45 backdrop-blur-[2px]"
-                        onClick={() => setMobileMenuOpen(false)}
+                        onClick={() => setMenuOpen(false)}
                         aria-label="Close menu overlay"
                     />
 
                     <aside className="relative h-full w-[82%] max-w-[315px] bg-[var(--frint-card)] p-4 shadow-2xl">
                         <div className="mb-4 flex items-center justify-end">
                             <button
-                                onClick={() => setMobileMenuOpen(false)}
+                                onClick={() => setMenuOpen(false)}
                                 className="frint-secondary-btn flex h-9 w-9 items-center justify-center p-0"
                                 aria-label="Close menu"
                             >
@@ -203,6 +303,15 @@ export default function DashboardLayout({
                             </NavLink>
                         )
                     })}
+
+                    <button
+                        type="button"
+                        onClick={() => setMenuOpen(true)}
+                        className="flex min-h-[48px] flex-col items-center justify-center gap-1 rounded-[18px] px-1 text-[10px] font-semibold text-[var(--frint-muted)]"
+                    >
+                        <MoreHorizontal size={16} />
+                        More
+                    </button>
                 </div>
             </nav>
         </div>
