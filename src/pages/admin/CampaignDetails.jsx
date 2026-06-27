@@ -11,6 +11,7 @@ import {
     Plus,
     RefreshCw,
     Target,
+    Trash2,
     UserPlus,
     Users,
 } from 'lucide-react'
@@ -93,6 +94,7 @@ export default function CampaignDetails() {
     const [message, setMessage] = useState('')
     const [showAssignBox, setShowAssignBox] = useState(false)
     const [showSettings, setShowSettings] = useState(false)
+    const [deleting, setDeleting] = useState(false)
 
     const [assignmentForm, setAssignmentForm] = useState({
         ambassador_id: '',
@@ -291,6 +293,107 @@ export default function CampaignDetails() {
         await loadData()
     }
 
+    const deleteCampaign = async () => {
+        if (!campaign) return
+
+        let warningMessage = `Delete "${campaign.title}"?\n\nThis will remove campaign assignments, leads, and linked tasks. This cannot be undone.`
+
+        if (campaign.status === 'completed') {
+            warningMessage = `Warning: "${campaign.title}" is marked as COMPLETED. Deleting it will erase all history, leads, and reports associated with it, which is not recommended. It is better to leave it completed.\n\nDo you still want to delete it?`
+        } else if (campaign.status === 'active' && leads.length > 0) {
+            warningMessage = `Warning: "${campaign.title}" is ACTIVE and has already collected ${leads.length} lead(s). Deleting it will permanently remove all assignments, tasks, and collected leads.\n\nDo you still want to delete it?`
+        }
+
+        const confirmDelete = window.confirm(warningMessage)
+        if (!confirmDelete) return
+
+        const secondConfirm = window.prompt(
+            'Type DELETE to confirm campaign deletion.'
+        )
+        if (secondConfirm !== 'DELETE') return
+
+        setDeleting(true)
+        setMessage('')
+
+        // 1. Get task IDs linked to the campaign
+        const taskIdsResult = await supabase
+            .from('tasks')
+            .select('id')
+            .eq('campaign_id', campaign.id)
+
+        if (taskIdsResult.error) {
+            setMessage(taskIdsResult.error.message)
+            setDeleting(false)
+            return
+        }
+
+        const taskIds = (taskIdsResult.data || []).map((task) => task.id)
+
+        // 2. Delete task assignments
+        if (taskIds.length > 0) {
+            const assignmentDelete = await supabase
+                .from('task_assignments')
+                .delete()
+                .in('task_id', taskIds)
+
+            if (assignmentDelete.error) {
+                setMessage(assignmentDelete.error.message)
+                setDeleting(false)
+                return
+            }
+        }
+
+        // 3. Delete tasks
+        const tasksDelete = await supabase
+            .from('tasks')
+            .delete()
+            .eq('campaign_id', campaign.id)
+
+        if (tasksDelete.error) {
+            setMessage(tasksDelete.error.message)
+            setDeleting(false)
+            return
+        }
+
+        // 4. Delete leads
+        const leadsDelete = await supabase
+            .from('leads')
+            .delete()
+            .eq('campaign_id', campaign.id)
+
+        if (leadsDelete.error) {
+            setMessage(leadsDelete.error.message)
+            setDeleting(false)
+            return
+        }
+
+        // 5. Delete ambassador campaign assignments
+        const ambassadorCampaignDelete = await supabase
+            .from('ambassador_campaigns')
+            .delete()
+            .eq('campaign_id', campaign.id)
+
+        if (ambassadorCampaignDelete.error) {
+            setMessage(ambassadorCampaignDelete.error.message)
+            setDeleting(false)
+            return
+        }
+
+        // 6. Delete campaign
+        const campaignDelete = await supabase
+            .from('campaigns')
+            .delete()
+            .eq('id', campaign.id)
+
+        if (campaignDelete.error) {
+            setMessage(campaignDelete.error.message)
+            setDeleting(false)
+            return
+        }
+
+        window.location.href = '/admin/campaigns'
+    }
+
     if (loading) {
         return (
             <DashboardLayout
@@ -398,7 +501,7 @@ export default function CampaignDetails() {
                         )}
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
+                    <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0 sm:items-center">
                         <button
                             type="button"
                             onClick={() => setShowSettings((value) => !value)}
@@ -419,6 +522,16 @@ export default function CampaignDetails() {
                             <option value="paused">Paused</option>
                             <option value="completed">Completed</option>
                         </select>
+
+                        <button
+                            type="button"
+                            onClick={deleteCampaign}
+                            disabled={deleting}
+                            className="flex items-center justify-center gap-2 rounded-full bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:opacity-60 dark:bg-red-950/30 dark:text-red-300 col-span-2 sm:col-span-1"
+                        >
+                            <Trash2 size={15} />
+                            {deleting ? 'Deleting...' : 'Delete campaign'}
+                        </button>
                     </div>
                 </div>
 
