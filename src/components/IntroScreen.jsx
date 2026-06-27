@@ -1,40 +1,44 @@
 import { useEffect, useRef, useState } from 'react'
 
-const VIDEO_SRC = '/logomotion-720p.mp4'
-const MIN_PLAY_TIME = 3800
-const MAX_VIDEO_WAIT = 7000
+const INTRO_DURATION = 5600
 
-export default function IntroScreen({ onComplete, onFinish, onDone }) {
-  const [videoReady, setVideoReady] = useState(false)
-  const [progress, setProgress] = useState(0)
-  const [status, setStatus] = useState('Loading...')
-
-  const completedRef = useRef(false)
-  const startedRef = useRef(false)
+export default function IntroScreen({
+  onFinish,
+  title = 'Ambassador Control Panel',
+  subtitle = 'Loading your workspace',
+  footerText = 'Preparing your panel',
+}) {
   const videoRef = useRef(null)
+  const finishedRef = useRef(false)
+  const [progress, setProgress] = useState(0)
 
   const finishIntro = () => {
-    if (completedRef.current) return
-    completedRef.current = true
-
-    const finish = onComplete || onFinish || onDone
-    if (finish) finish()
-  }
-
-  const startIntro = () => {
-    if (startedRef.current) return
-    startedRef.current = true
-    setVideoReady(true)
-    setStatus('Loading...')
+    if (finishedRef.current) return
+    finishedRef.current = true
+    setProgress(100)
+    onFinish()
   }
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setStatus('Preparing...')
-      startIntro()
-    }, MAX_VIDEO_WAIT)
+    const startTime = Date.now()
 
-    return () => window.clearTimeout(timer)
+    const progressTimer = setInterval(() => {
+      const elapsed = Date.now() - startTime
+      const nextProgress = Math.min((elapsed / INTRO_DURATION) * 100, 100)
+
+      setProgress(nextProgress)
+
+      if (nextProgress >= 100) clearInterval(progressTimer)
+    }, 70)
+
+    const fallbackTimer = setTimeout(() => {
+      finishIntro()
+    }, INTRO_DURATION + 900)
+
+    return () => {
+      clearInterval(progressTimer)
+      clearTimeout(fallbackTimer)
+    }
   }, [])
 
   useEffect(() => {
@@ -43,112 +47,98 @@ export default function IntroScreen({ onComplete, onFinish, onDone }) {
 
     const playVideo = async () => {
       try {
-        video.muted = true
+        video.currentTime = 0
         await video.play()
       } catch {
-        // Mobile browsers can still delay autoplay. The fallback timer will continue.
+        finishIntro()
       }
     }
 
     playVideo()
   }, [])
 
-  useEffect(() => {
-    if (!videoReady) return
-
-    let frame
-    const start = performance.now()
-
-    const tick = (now) => {
-      const elapsed = now - start
-      const next = Math.min((elapsed / MIN_PLAY_TIME) * 100, 100)
-      setProgress(next)
-
-      if (next >= 100) {
-        window.setTimeout(finishIntro, 220)
-        return
-      }
-
-      frame = requestAnimationFrame(tick)
-    }
-
-    frame = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(frame)
-  }, [videoReady])
-
   return (
-    <main className="fixed inset-0 z-[9999] min-h-[100svh] overflow-hidden bg-[var(--frint-bg)]">
-      <div className="pointer-events-none absolute left-[-140px] top-[-120px] h-[340px] w-[340px] rounded-full bg-[var(--frint-accent)]/25 blur-3xl" />
-      <div className="pointer-events-none absolute bottom-[-160px] right-[-130px] h-[360px] w-[360px] rounded-full bg-[#0060f8]/10 blur-3xl" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-hidden bg-[#05070B] px-4 py-6 text-white">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_32%_45%,rgba(0,96,248,0.18),transparent_38%),radial-gradient(circle_at_78%_55%,rgba(112,192,248,0.12),transparent_34%)]" />
 
-      <section className="relative mx-auto flex min-h-[100svh] w-full max-w-6xl items-center justify-center px-4 py-4">
-        <div className="grid w-full items-center gap-8 lg:grid-cols-[0.92fr_1.08fr]">
-          <div className="mx-auto w-full max-w-[390px] rounded-[32px] border frint-border bg-[var(--frint-card)]/82 p-3 shadow-[0_28px_80px_rgba(15,23,42,0.12)] backdrop-blur-xl sm:p-4 lg:max-w-[420px]">
-            <div className="overflow-hidden rounded-[26px] bg-[var(--frint-soft-card)]">
-              <div className="relative grid aspect-[0.78] max-h-[62svh] min-h-[390px] place-items-center sm:min-h-[470px] lg:min-h-[560px]">
-                <div className={`absolute inset-0 grid place-items-center transition-opacity duration-500 ${videoReady ? 'opacity-0' : 'opacity-100'}`}>
-                  <img src="/logo.svg" alt="Frint" className="h-16 w-auto object-contain" />
-                </div>
+      <div
+        className="
+          relative z-10 w-full max-w-[320px] rounded-[32px]
+          border border-white/10 bg-[#111111]/70 p-4 shadow-2xl backdrop-blur-xl
 
-                <video
-                  ref={videoRef}
-                  src={VIDEO_SRC}
-                  muted
-                  playsInline
-                  autoPlay
-                  preload="auto"
-                  onLoadedData={startIntro}
-                  onCanPlay={startIntro}
-                  onPlaying={startIntro}
-                  onError={startIntro}
-                  className={`h-full w-full object-contain transition-opacity duration-500 ${videoReady ? 'opacity-100' : 'opacity-0'}`}
-                />
-              </div>
-            </div>
-
-            <div className="px-4 pb-4 pt-4 sm:px-5 sm:pb-5">
-              <p className="text-[15px] font-semibold tracking-[-0.02em] text-[var(--frint-text)]">
-                {status}
-              </p>
-
-              <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[var(--frint-soft-card)]">
-                <div
-                  className="h-full rounded-full bg-[var(--frint-accent)] transition-[width]"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
+          md:max-w-5xl md:rounded-[34px] md:p-10
+        "
+      >
+        <div
+          className="
+            flex flex-col gap-5
+            md:grid md:min-h-[520px] md:grid-cols-[390px_1fr]
+            md:items-center md:gap-14
+          "
+        >
+          <div className="flex justify-center md:justify-end">
+            <div className="overflow-hidden rounded-[28px] border border-white/10 bg-black shadow-xl">
+              <video
+                ref={videoRef}
+                src="/logomotion-720p.mp4"
+                className="
+                  h-[430px] w-[242px] object-cover
+                  md:h-[500px] md:w-[282px]
+                "
+                muted
+                playsInline
+                autoPlay
+                onEnded={finishIntro}
+              />
             </div>
           </div>
 
-          <div className="hidden lg:block">
-            <div className="max-w-lg">
-              <img src="/logo.svg" alt="Frint" className="h-14 w-auto object-contain" />
+          <div
+            className="
+              rounded-[24px] border border-white/10 bg-white/[0.06]
+              p-5 backdrop-blur-xl
+              md:max-w-[360px] md:rounded-[28px] md:p-7
+            "
+          >
+            <img
+              src="/logo.svg"
+              alt="Frint"
+              className="h-12 w-auto"
+            />
 
-              <h1 className="mt-8 max-w-md text-[48px] font-semibold leading-[1.02] tracking-[-0.07em] text-[var(--frint-text)]">
-                Ambassador Control Panel
-              </h1>
+            <h1 className="mt-6 text-2xl font-black leading-tight md:text-3xl">
+              {title}
+            </h1>
 
-              <p className="mt-5 max-w-md text-base leading-7 frint-muted">
-                Preparing your Frint workspace for campaigns, referral links, leads, tasks, proofs, and reports.
-              </p>
+            <p className="mt-2 text-sm font-medium text-slate-400">
+              {subtitle}
+            </p>
 
-              <div className="mt-8 max-w-sm">
-                <div className="h-2 overflow-hidden rounded-full bg-[var(--frint-soft-card)]">
-                  <div
-                    className="h-full rounded-full bg-[var(--frint-accent)] transition-[width]"
-                    style={{ width: `${progress}%` }}
-                  />
-                </div>
-
-                <div className="mt-3 flex items-center justify-between text-xs font-semibold frint-muted">
-                  <span>{videoReady ? 'Preparing panel' : 'Loading intro'}</span>
-                  <span>{Math.round(progress)}%</span>
-                </div>
-              </div>
+            <div className="mt-7 h-[5px] overflow-hidden rounded-full bg-white/10">
+              <div
+                className="h-full rounded-full bg-[#70C0F8] transition-all duration-100"
+                style={{ width: `${progress}%` }}
+              />
             </div>
+
+            <div className="mt-3 flex items-center justify-between text-xs font-semibold text-slate-400">
+              <span>{footerText}</span>
+              <span>{Math.round(progress)}%</span>
+            </div>
+
+            <button
+              onClick={finishIntro}
+              className="
+                mt-6 rounded-full border border-white/10 bg-white/10
+                px-5 py-2.5 text-sm font-bold text-white
+                hover:bg-white/15
+              "
+            >
+              Skip
+            </button>
           </div>
         </div>
-      </section>
-    </main>
+      </div>
+    </div>
   )
 }
