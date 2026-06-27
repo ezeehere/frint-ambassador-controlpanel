@@ -34,6 +34,7 @@ import MyTasks from './pages/ambassador/MyTasks'
 import Leaderboard from './pages/Leaderboard'
 import CampaignLeadPage from './pages/public/CampaignLeadPage'
 import ThankYou from './pages/public/ThankYou'
+import RequestAccess from './pages/RequestAccess'
 
 function getIntroKey(pathname) {
   if (pathname.startsWith('/c/')) {
@@ -219,6 +220,17 @@ function AppGate() {
       <Route path="/thank-you" element={<ThankYou />} />
 
       {/* Auth */}
+
+      <Route
+        path="/request-access"
+        element={
+          !session ? (
+            <RequestAccess />
+          ) : (
+            <Navigate to={getRoleHome(role)} replace />
+          )
+        }
+      />
       <Route
         path="/login"
         element={
