@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, BarChart3, CheckCircle2, Lock, Mail, ShieldCheck, UsersRound } from 'lucide-react'
-import { supabase } from '../lib/supabase'
+import { ArrowRight, Lock, Mail, ShieldCheck } from 'lucide-react'
 import ThemeToggle from '../components/ThemeToggle'
+import { supabase } from '../lib/supabase'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -31,168 +31,157 @@ export default function Login() {
   }
 
   return (
-    <main className="frint-page relative min-h-screen overflow-hidden px-4 py-3 sm:py-4">
-      <div className="pointer-events-none absolute left-[-180px] top-[-180px] h-[360px] w-[360px] rounded-full bg-[var(--frint-accent)]/18 blur-3xl" />
-      <div className="pointer-events-none absolute bottom-[-200px] right-[-180px] h-[420px] w-[420px] rounded-full bg-[#0060f8]/10 blur-3xl" />
+    <main className="relative min-h-[100svh] overflow-hidden bg-[var(--frint-bg)] px-4 py-4">
+      <div className="pointer-events-none absolute left-[-120px] top-[-100px] h-[300px] w-[300px] rounded-full bg-[var(--frint-accent)]/22 blur-3xl" />
+      <div className="pointer-events-none absolute bottom-[-140px] right-[-120px] h-[320px] w-[320px] rounded-full bg-[#0060f8]/10 blur-3xl" />
 
-      <div className="relative mx-auto flex min-h-[calc(100vh-24px)] w-full max-w-6xl flex-col">
-        <header className="flex items-center justify-between gap-3 py-2">
-          <img src="/logo.svg" alt="Frint" className="h-10 w-auto object-contain sm:h-11" />
+      <div className="relative mx-auto flex min-h-[calc(100svh-32px)] w-full max-w-6xl flex-col">
+        <header className="flex shrink-0 items-center justify-between gap-4 py-1">
+          <img src="/logo.svg" alt="Frint" className="h-11 w-auto object-contain sm:h-12" />
           <ThemeToggle />
         </header>
 
-        <div className="flex flex-1 items-center justify-center py-2">
-          <section className="grid w-full overflow-hidden rounded-[28px] border frint-border bg-[var(--frint-card)] shadow-sm lg:h-[min(680px,calc(100vh-92px))] lg:grid-cols-[0.92fr_1.08fr]">
-            <aside className="hidden min-h-0 overflow-hidden border-r frint-border bg-[var(--frint-soft-card)] p-6 lg:block">
-              <div className="flex h-full flex-col justify-between gap-5">
-                <div>
-                  <div className="inline-flex items-center gap-2 rounded-full border frint-border bg-[var(--frint-card)] px-3 py-1.5 text-xs font-semibold text-[var(--frint-accent)]">
-                    <ShieldCheck size={14} />
-                    Secure workspace
-                  </div>
-
-                  <h1 className="mt-6 max-w-sm text-[38px] font-semibold leading-[1.05] tracking-[-0.065em] text-[var(--frint-text)]">
-                    Keep campus work under control.
+        <section className="grid flex-1 items-center gap-5 py-4 lg:grid-cols-[1fr_460px] lg:gap-10 lg:py-0">
+          <div className="hidden lg:block">
+            <div className="max-w-xl rounded-[34px] border frint-border bg-[var(--frint-card)]/72 p-6 shadow-[0_24px_70px_rgba(15,23,42,0.10)] backdrop-blur-xl">
+              <div className="grid gap-4 sm:grid-cols-[1fr_0.8fr]">
+                <div className="rounded-[28px] bg-[var(--frint-soft-card)] p-6">
+                  <p className="text-sm font-semibold frint-muted">Campaign pulse</p>
+                  <h1 className="mt-5 max-w-xs text-[42px] font-semibold leading-[1.02] tracking-[-0.065em] text-[var(--frint-text)]">
+                    Work that stays in view.
                   </h1>
 
-                  <p className="mt-4 max-w-sm text-sm leading-6 frint-muted">
-                    Manage campaigns, ambassadors, referral links, leads, tasks, proofs, and reports from one clean panel.
-                  </p>
+                  <div className="mt-8 space-y-4">
+                    {[
+                      ['Internship drive', '72%'],
+                      ['Workshop signups', '48%'],
+                      ['Proof review', '86%'],
+                    ].map(([label, value]) => (
+                      <div key={label}>
+                        <div className="mb-1.5 flex justify-between text-xs font-semibold frint-muted">
+                          <span>{label}</span>
+                          <span>{value}</span>
+                        </div>
+                        <div className="h-1.5 overflow-hidden rounded-full bg-[var(--frint-card)]">
+                          <div className="h-full rounded-full bg-[var(--frint-accent)]" style={{ width: value }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
-                <div className="grid gap-3">
-                  <PreviewCard
-                    icon={UsersRound}
-                    label="Ambassadors"
-                    value="24"
-                    note="Active across colleges"
-                  />
-                  <PreviewCard
-                    icon={BarChart3}
-                    label="Leads tracked"
-                    value="1,280"
-                    note="Campaign submissions"
-                  />
-                </div>
-
-                <div className="grid grid-cols-3 gap-3">
-                  {['Campaigns', 'Tasks', 'Reports'].map((item) => (
-                    <div key={item} className="rounded-[18px] border frint-border bg-[var(--frint-card)] p-3">
-                      <CheckCircle2 size={15} className="text-[var(--frint-accent)]" />
-                      <p className="mt-3 truncate text-sm font-semibold text-[var(--frint-text)]">{item}</p>
-                      <p className="mt-1 truncate text-xs frint-muted">Ready</p>
+                <div className="grid gap-4">
+                  {[
+                    ['24', 'Ambassadors'],
+                    ['1,280', 'Leads tracked'],
+                    ['156', 'Tasks done'],
+                  ].map(([value, label]) => (
+                    <div key={label} className="rounded-[26px] border frint-border bg-[var(--frint-soft-card)] p-5">
+                      <p className="text-3xl font-semibold tracking-[-0.04em] text-[var(--frint-text)]">{value}</p>
+                      <p className="mt-2 text-sm font-medium frint-muted">{label}</p>
                     </div>
                   ))}
                 </div>
               </div>
-            </aside>
+            </div>
+          </div>
 
-            <section className="flex min-h-0 items-center justify-center p-5 sm:p-7 lg:p-8">
-              <div className="w-full max-w-[430px]">
-                <div className="mb-6 lg:hidden">
-                  <div className="rounded-[22px] border frint-border bg-[var(--frint-soft-card)] p-4">
-                    <p className="text-sm font-semibold text-[var(--frint-text)]">Ambassador Control Panel</p>
-                    <p className="mt-1 text-xs leading-5 frint-muted">Campaigns, referrals, leads, tasks, proofs, and reports.</p>
-                  </div>
+          <div className="mx-auto w-full max-w-md rounded-[30px] border frint-border bg-[var(--frint-card)]/88 p-5 shadow-[0_24px_70px_rgba(15,23,42,0.10)] backdrop-blur-xl sm:p-7 lg:mx-0">
+            <div className="rounded-[24px] bg-[var(--frint-soft-card)] px-4 py-4">
+              <h1 className="text-xl font-semibold tracking-[-0.04em] text-[var(--frint-text)] sm:text-2xl">
+                Ambassador Control Panel
+              </h1>
+              <p className="mt-1.5 text-sm leading-5 frint-muted">
+                Campaigns, referrals, leads, tasks, proofs, and reports.
+              </p>
+            </div>
+
+            <div className="mt-6">
+              <h2 className="text-[28px] font-semibold leading-none tracking-[-0.06em] text-[var(--frint-text)]">
+                Welcome back
+              </h2>
+              <p className="mt-2 text-sm leading-5 frint-muted">
+                Sign in to continue to the ambassador panel.
+              </p>
+            </div>
+
+            <form onSubmit={handleLogin} className="mt-6 space-y-4">
+              <label className="block">
+                <span className="mb-2 block text-sm font-semibold text-[var(--frint-text)]">
+                  Email address
+                </span>
+                <div className="flex items-center gap-3 rounded-[20px] border frint-border bg-[var(--frint-input)] px-4 py-3.5">
+                  <Mail size={18} className="shrink-0 frint-muted" />
+                  <input
+                    type="email"
+                    className="w-full bg-transparent text-sm font-medium outline-none"
+                    placeholder="admin@frint.in"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
                 </div>
+              </label>
 
-                <div>
-                  <h2 className="text-[30px] font-semibold leading-tight tracking-[-0.06em] text-[var(--frint-text)] sm:text-[34px]">
-                    Welcome back
-                  </h2>
-                  <p className="mt-2 text-sm leading-6 frint-muted">
-                    Sign in to continue to the ambassador panel.
-                  </p>
+              <label className="block">
+                <span className="mb-2 block text-sm font-semibold text-[var(--frint-text)]">
+                  Password
+                </span>
+                <div className="flex items-center gap-3 rounded-[20px] border frint-border bg-[var(--frint-input)] px-4 py-3.5">
+                  <Lock size={18} className="shrink-0 frint-muted" />
+                  <input
+                    type="password"
+                    className="w-full bg-transparent text-sm font-medium outline-none"
+                    placeholder="Enter password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
                 </div>
+              </label>
 
-                <form onSubmit={handleLogin} className="mt-7 space-y-4">
-                  <label className="block">
-                    <span className="mb-2 block text-sm font-semibold text-[var(--frint-text)]">Email address</span>
-                    <div className="flex items-center gap-3 rounded-[18px] border frint-border bg-[var(--frint-input)] px-4 py-3">
-                      <Mail size={17} className="shrink-0 frint-muted" />
-                      <input
-                        type="email"
-                        className="w-full bg-transparent text-sm font-medium text-[var(--frint-text)] outline-none placeholder:frint-muted"
-                        placeholder="admin@frint.in"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                      />
-                    </div>
-                  </label>
-
-                  <label className="block">
-                    <span className="mb-2 block text-sm font-semibold text-[var(--frint-text)]">Password</span>
-                    <div className="flex items-center gap-3 rounded-[18px] border frint-border bg-[var(--frint-input)] px-4 py-3">
-                      <Lock size={17} className="shrink-0 frint-muted" />
-                      <input
-                        type="password"
-                        className="w-full bg-transparent text-sm font-medium text-[var(--frint-text)] outline-none placeholder:frint-muted"
-                        placeholder="Enter password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                      />
-                    </div>
-                  </label>
-
-                  {error && (
-                    <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700 dark:bg-red-950/30 dark:text-red-300">
-                      {error}
-                    </p>
-                  )}
-
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="frint-primary-btn flex w-full items-center justify-center gap-2 px-5 py-3 text-sm disabled:opacity-70"
-                  >
-                    {loading ? 'Signing in...' : 'Sign in'}
-                    {!loading && <ArrowRight size={16} />}
-                  </button>
-                </form>
-
-                <div className="mt-5 rounded-[22px] border frint-border bg-[var(--frint-soft-card)] p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl bg-[var(--frint-card)] text-[var(--frint-accent)]">
-                      <ShieldCheck size={17} />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-[var(--frint-text)]">Need ambassador access?</p>
-                      <p className="mt-1 text-xs leading-5 frint-muted">Submit a request. Admin will verify and create your login.</p>
-                      <Link to="/request-access" className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-[var(--frint-accent)]">
-                        Request access
-                        <ArrowRight size={14} />
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-
-                <p className="mt-5 text-center text-xs frint-muted">
-                  Approved Frint admins and campus ambassadors only.
+              {error && (
+                <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700 dark:bg-red-950/30 dark:text-red-300">
+                  {error}
                 </p>
-              </div>
-            </section>
-          </section>
-        </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="frint-primary-btn flex w-full items-center justify-center gap-2 px-5 py-3.5 text-sm disabled:opacity-70"
+              >
+                {loading ? 'Signing in...' : 'Sign in'}
+                {!loading && <ArrowRight size={17} />}
+              </button>
+            </form>
+
+            <Link
+              to="/request-access"
+              className="mt-5 flex items-start gap-3 rounded-[24px] border frint-border bg-[var(--frint-soft-card)] px-4 py-4 transition hover:-translate-y-0.5"
+            >
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-[var(--frint-card)] text-[var(--frint-accent)]">
+                <ShieldCheck size={18} />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold text-[var(--frint-text)]">
+                  Need ambassador access?
+                </span>
+                <span className="mt-1 block text-xs leading-5 frint-muted">
+                  Submit a request. Admin will verify and create your login.
+                </span>
+                <span className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-[var(--frint-text)]">
+                  Request access <ArrowRight size={14} />
+                </span>
+              </span>
+            </Link>
+
+            <p className="mt-4 text-center text-xs frint-muted">
+              Approved Frint admins and campus ambassadors only.
+            </p>
+          </div>
+        </section>
       </div>
     </main>
-  )
-}
-
-function PreviewCard({ icon: Icon, label, value, note }) {
-  return (
-    <div className="rounded-[22px] border frint-border bg-[var(--frint-card)] p-4">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-sm font-semibold frint-muted">{label}</p>
-          <p className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-[var(--frint-text)]">{value}</p>
-          <p className="mt-1 text-xs frint-muted">{note}</p>
-        </div>
-        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--frint-soft-card)] text-[var(--frint-accent)]">
-          <Icon size={18} />
-        </div>
-      </div>
-    </div>
   )
 }
