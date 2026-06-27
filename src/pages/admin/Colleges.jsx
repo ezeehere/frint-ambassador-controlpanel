@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Building2, Plus, RefreshCw, Search } from 'lucide-react'
+import { Building2, Plus, RefreshCw, Search, X } from 'lucide-react'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import StatusBadge from '../../components/ui/StatusBadge'
 import EmptyState from '../../components/ui/EmptyState'
@@ -19,6 +19,7 @@ export default function Colleges() {
     const [search, setSearch] = useState('')
     const [form, setForm] = useState(initialForm)
     const [message, setMessage] = useState('')
+    const [showForm, setShowForm] = useState(false)
 
     const loadColleges = async () => {
         setLoading(true)
@@ -75,6 +76,7 @@ export default function Colleges() {
         }
 
         setForm(initialForm)
+        setShowForm(false)
         await loadColleges()
         setSaving(false)
     }
@@ -99,151 +101,182 @@ export default function Colleges() {
         <DashboardLayout
             role="admin"
             title="Colleges"
-            subtitle="Manage colleges connected with Frint ambassadors"
+            subtitle="Manage campuses connected with Frint ambassadors"
         >
-            <div className="grid gap-6 xl:grid-cols-[0.85fr_1.25fr]">
-                <section className="frint-card rounded-[30px] p-5">
+            <section className="frint-card rounded-[24px] p-4 sm:p-5">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-[#0060f8]">
-                            <Building2 size={21} />
+                        <div className="frint-icon-chip">
+                            <Building2 size={19} />
                         </div>
 
                         <div>
-                            <h2 className="text-xl font-black text-[var(--frint-text)]">
-                                Add college
+                            <h2 className="text-lg font-semibold text-[var(--frint-text)]">
+                                College list
                             </h2>
                             <p className="text-sm frint-muted">
-                                Create a campus record
+                                {filteredColleges.length} campuses
                             </p>
                         </div>
                     </div>
 
-                    {message && (
-                        <div className="mt-5 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
-                            {message}
+                    <div className="grid gap-2 sm:flex sm:items-center">
+                        <div className="flex min-w-0 items-center gap-2 rounded-full border frint-border bg-[var(--frint-card)] px-3 py-2">
+                            <Search size={16} className="shrink-0 frint-muted" />
+                            <input
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                placeholder="Search college"
+                                className="min-w-0 flex-1 bg-transparent text-sm font-medium outline-none placeholder:text-slate-400 sm:w-56"
+                            />
                         </div>
-                    )}
 
-                    <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-                        <label className="block">
-                            <span className="mb-2 block text-sm font-black text-[var(--frint-text)]">
-                                College name
-                            </span>
+                        <button
+                            onClick={() => setShowForm(true)}
+                            className="frint-primary-btn flex items-center justify-center gap-2 px-4 py-2 text-sm"
+                        >
+                            <Plus size={15} />
+                            Add college
+                        </button>
+
+                        <button
+                            onClick={loadColleges}
+                            className="frint-secondary-btn flex items-center justify-center gap-2 px-4 py-2 text-sm"
+                        >
+                            <RefreshCw size={15} />
+                            Refresh
+                        </button>
+                    </div>
+                </div>
+
+                {message && (
+                    <div className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                        {message}
+                    </div>
+                )}
+
+                {showForm && (
+                    <form onSubmit={handleSubmit} className="mt-4 rounded-[20px] border frint-border bg-[var(--frint-soft-card)] p-3">
+                        <div className="mb-3 flex items-center justify-between gap-3">
+                            <div>
+                                <p className="text-sm font-semibold text-[var(--frint-text)]">
+                                    Add college
+                                </p>
+                                <p className="text-xs frint-muted">
+                                    Create a campus record for ambassador assignment.
+                                </p>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={() => setShowForm(false)}
+                                className="frint-secondary-btn flex h-9 w-9 items-center justify-center p-0"
+                            >
+                                <X size={15} />
+                            </button>
+                        </div>
+
+                        <div className="grid gap-3 lg:grid-cols-2">
                             <input
                                 value={form.name}
                                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                                className="w-full rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
-                                placeholder="Jorhat Institute of Science and Technology"
+                                className="frint-input"
+                                placeholder="College name"
                                 required
                             />
-                        </label>
 
-                        <label className="block">
-                            <span className="mb-2 block text-sm font-black text-[var(--frint-text)]">
-                                City
-                            </span>
                             <input
                                 value={form.city}
                                 onChange={(e) => setForm({ ...form, city: e.target.value })}
-                                className="w-full rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
-                                placeholder="Jorhat"
+                                className="frint-input"
+                                placeholder="City"
                             />
-                        </label>
 
-                        <label className="block">
-                            <span className="mb-2 block text-sm font-black text-[var(--frint-text)]">
-                                State
-                            </span>
                             <input
                                 value={form.state}
                                 onChange={(e) => setForm({ ...form, state: e.target.value })}
-                                className="w-full rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
-                                placeholder="Assam"
+                                className="frint-input"
+                                placeholder="State"
                             />
-                        </label>
 
-                        <label className="block">
-                            <span className="mb-2 block text-sm font-black text-[var(--frint-text)]">
-                                Contact person
-                            </span>
                             <input
                                 value={form.contact_person}
                                 onChange={(e) => setForm({ ...form, contact_person: e.target.value })}
-                                className="w-full rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
-                                placeholder="Optional"
+                                className="frint-input"
+                                placeholder="Contact person optional"
                             />
-                        </label>
+                        </div>
 
                         <button
                             type="submit"
                             disabled={saving}
-                            className="frint-primary-btn flex w-full items-center justify-center gap-2 px-5 py-3 text-sm disabled:opacity-60"
+                            className="frint-primary-btn mt-3 flex w-full items-center justify-center gap-2 px-5 py-3 text-sm disabled:opacity-60 sm:w-fit"
                         >
-                            <Plus size={17} />
+                            <Plus size={16} />
                             {saving ? 'Adding...' : 'Add college'}
                         </button>
                     </form>
-                </section>
+                )}
 
-                <section className="frint-card rounded-[30px] p-5">
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                        <div>
-                            <h2 className="text-xl font-black text-[var(--frint-text)]">
-                                College list
-                            </h2>
-                            <p className="mt-1 text-sm frint-muted">
-                                Active and inactive campuses
-                            </p>
+                <div className="mt-4">
+                    {loading ? (
+                        <div className="rounded-[20px] border frint-border p-6 text-center text-sm font-medium frint-muted">
+                            Loading colleges...
                         </div>
+                    ) : filteredColleges.length === 0 ? (
+                        <EmptyState
+                            title="No colleges found"
+                            message="Add the first college to start assigning ambassadors."
+                        />
+                    ) : (
+                        <>
+                            <div className="grid gap-3 md:hidden">
+                                {filteredColleges.map((college) => (
+                                    <article key={college.id} className="rounded-[20px] border frint-border p-4">
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div className="min-w-0">
+                                                <p className="font-semibold text-[var(--frint-text)]">
+                                                    {college.name}
+                                                </p>
+                                                <p className="mt-1 text-sm frint-muted">
+                                                    {[college.city, college.state].filter(Boolean).join(', ') || 'Location not added'}
+                                                </p>
+                                                {college.contact_person && (
+                                                    <p className="mt-1 text-xs frint-muted">
+                                                        Contact: {college.contact_person}
+                                                    </p>
+                                                )}
+                                            </div>
 
-                        <div className="flex flex-col gap-3 sm:flex-row">
-                            <div className="flex items-center gap-2 rounded-full border frint-border bg-[var(--frint-card)] px-4 py-2.5">
-                                <Search size={17} className="frint-muted" />
-                                <input
-                                    value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
-                                    placeholder="Search college"
-                                    className="w-full bg-transparent text-sm font-semibold outline-none placeholder:text-slate-400 sm:w-56"
-                                />
+                                            <StatusBadge status={college.status} />
+                                        </div>
+
+                                        <select
+                                            value={college.status}
+                                            onChange={(e) => updateStatus(college.id, e.target.value)}
+                                            className="frint-input mt-3"
+                                        >
+                                            <option value="active">Active</option>
+                                            <option value="inactive">Inactive</option>
+                                        </select>
+                                    </article>
+                                ))}
                             </div>
 
-                            <button
-                                onClick={loadColleges}
-                                className="frint-secondary-btn flex items-center justify-center gap-2 px-5 py-2.5 text-sm"
-                            >
-                                <RefreshCw size={16} />
-                                Refresh
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className="mt-5 rounded-[24px] border frint-border">
-                        {loading ? (
-                            <div className="p-8 text-center text-sm font-bold frint-muted">
-                                Loading colleges...
-                            </div>
-                        ) : filteredColleges.length === 0 ? (
-                            <div className="p-5">
-                                <EmptyState
-                                    title="No colleges found"
-                                    message="Add your first college from the form."
-                                />
-                            </div>
-                        ) : (
-                            <div className="overflow-x-auto">
-                                <table className="min-w-[760px] w-full text-left">
+                            <div className="hidden overflow-hidden rounded-[20px] border frint-border md:block">
+                                <table className="w-full text-left">
                                     <thead className="border-b frint-border bg-[var(--frint-soft-card)]">
                                         <tr>
-                                            <th className="px-4 py-4 text-xs font-black uppercase tracking-wide frint-muted">
+                                            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide frint-muted">
                                                 College
                                             </th>
-                                            <th className="px-4 py-4 text-xs font-black uppercase tracking-wide frint-muted">
+                                            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide frint-muted">
                                                 Location
                                             </th>
-                                            <th className="px-4 py-4 text-xs font-black uppercase tracking-wide frint-muted">
+                                            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide frint-muted">
                                                 Status
                                             </th>
-                                            <th className="px-4 py-4 text-xs font-black uppercase tracking-wide frint-muted">
+                                            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wide frint-muted">
                                                 Update
                                             </th>
                                         </tr>
@@ -252,30 +285,30 @@ export default function Colleges() {
                                     <tbody>
                                         {filteredColleges.map((college) => (
                                             <tr key={college.id} className="border-b frint-border last:border-b-0">
-                                                <td className="px-4 py-4">
-                                                    <p className="font-black text-[var(--frint-text)]">
+                                                <td className="px-4 py-3">
+                                                    <p className="font-semibold text-[var(--frint-text)]">
                                                         {college.name}
                                                     </p>
                                                     {college.contact_person && (
-                                                        <p className="mt-1 text-sm frint-muted">
+                                                        <p className="mt-0.5 text-sm frint-muted">
                                                             {college.contact_person}
                                                         </p>
                                                     )}
                                                 </td>
 
-                                                <td className="px-4 py-4 text-sm font-bold frint-muted">
+                                                <td className="px-4 py-3 text-sm frint-muted">
                                                     {[college.city, college.state].filter(Boolean).join(', ') || 'Not added'}
                                                 </td>
 
-                                                <td className="px-4 py-4">
+                                                <td className="px-4 py-3">
                                                     <StatusBadge status={college.status} />
                                                 </td>
 
-                                                <td className="px-4 py-4">
+                                                <td className="px-4 py-3">
                                                     <select
                                                         value={college.status}
                                                         onChange={(e) => updateStatus(college.id, e.target.value)}
-                                                        className="rounded-2xl border frint-border bg-[var(--frint-card)] px-3 py-2 text-sm font-bold outline-none"
+                                                        className="rounded-full border frint-border bg-[var(--frint-card)] px-3 py-2 text-sm font-medium outline-none"
                                                     >
                                                         <option value="active">Active</option>
                                                         <option value="inactive">Inactive</option>
@@ -286,10 +319,10 @@ export default function Colleges() {
                                     </tbody>
                                 </table>
                             </div>
-                        )}
-                    </div>
-                </section>
-            </div>
+                        </>
+                    )}
+                </div>
+            </section>
         </DashboardLayout>
     )
 }

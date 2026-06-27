@@ -29,60 +29,77 @@ export default function Login() {
   }
 
   return (
-    <main className="frint-page px-4 py-8">
-      <div className="mx-auto flex min-h-[calc(100vh-64px)] max-w-6xl items-center justify-center">
-        <div className="frint-card grid w-full overflow-hidden rounded-[36px] shadow-xl lg:grid-cols-2">
-          <section className="hidden bg-[#0b1220] p-10 text-white lg:block">
-            <div className="flex h-full flex-col justify-between">
+    <main className="frint-page min-h-screen px-4 py-6 sm:py-8">
+      <div className="mx-auto flex min-h-[calc(100vh-48px)] w-full max-w-5xl items-center justify-center">
+        <section className="frint-card grid w-full overflow-hidden rounded-[30px] lg:grid-cols-[0.95fr_1.05fr]">
+          <div className="hidden bg-[#101010] p-8 text-white lg:block">
+            <div className="flex h-full min-h-[540px] flex-col justify-between">
               <div>
-                <img src="/logo.svg" alt="Frint" className="h-16 w-auto" />
+                <img src="/logo.svg" alt="Frint" className="h-12 w-auto" />
+
                 <div className="mt-16">
-                  <span className="rounded-full bg-[#0060f8]/20 px-4 py-2 text-sm font-semibold text-[#70c0f8]">
+                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-[#70c0f8]">
                     Ambassador Panel
                   </span>
-                  <h1 className="mt-8 text-5xl font-bold leading-tight">
-                    Manage campus campaigns with clarity.
+
+                  <h1 className="mt-6 max-w-sm text-[42px] font-semibold leading-[1.05] tracking-[-0.06em]">
+                    Run campus campaigns with clarity.
                   </h1>
-                  <p className="mt-5 max-w-md text-lg text-slate-300">
-                    Track ambassadors, referrals, student leads, tasks, proof uploads, and reports from one place.
+
+                  <p className="mt-5 max-w-sm text-[15px] leading-7 text-white/65">
+                    Track ambassadors, referral links, student leads, tasks, proof uploads, and reports from one clean workspace.
                   </p>
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
-                <p className="text-sm text-slate-300">
-                  Built for Frint campus teams, hiring drives, workshops, and student outreach.
-                </p>
+              <div className="grid gap-3 rounded-[24px] border border-white/10 bg-white/[0.04] p-4">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-white/55">Campaigns</span>
+                  <span className="font-semibold text-white">Live tracking</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-white/55">Ambassadors</span>
+                  <span className="font-semibold text-white">Role based</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-white/55">Reports</span>
+                  <span className="font-semibold text-white">Export ready</span>
+                </div>
               </div>
             </div>
-          </section>
+          </div>
 
-          <section className="p-8 sm:p-12">
+          <div className="p-5 sm:p-8 lg:p-10">
             <div className="mx-auto max-w-md">
-              <div className="mb-10 flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#0060f8] text-white">
-                  <GraduationCap size={24} />
+              <div className="lg:hidden">
+                <img src="/logo.svg" alt="Frint" className="h-10 w-auto" />
+              </div>
+
+              <div className="mt-8 flex items-start gap-3 lg:mt-0">
+                <div className="frint-icon-chip shrink-0">
+                  <GraduationCap size={21} />
                 </div>
+
                 <div>
-                  <h2 className="text-2xl font-bold">
+                  <h2 className="text-[26px] font-semibold leading-tight tracking-[-0.05em] text-[var(--frint-text)]">
                     Welcome back
                   </h2>
-                  <p className="frint-muted text-sm">
-                    Login to Frint Ambassador Control Panel
+                  <p className="mt-1 text-sm frint-muted">
+                    Login to the Frint Ambassador Control Panel
                   </p>
                 </div>
               </div>
 
-              <form onSubmit={handleLogin} className="space-y-5">
+              <form onSubmit={handleLogin} className="mt-8 space-y-4">
                 <label className="block">
-                  <span className="mb-2 block text-sm font-semibold">
+                  <span className="mb-2 block text-sm font-semibold text-[var(--frint-text)]">
                     Email
                   </span>
                   <div className="flex items-center gap-3 rounded-2xl border frint-border bg-[var(--frint-input)] px-4 py-3">
-                    <Mail size={18} className="frint-muted" />
+                    <Mail size={17} className="frint-muted" />
                     <input
                       type="email"
-                      className="w-full bg-transparent outline-none"
+                      className="w-full bg-transparent text-sm font-medium outline-none"
                       placeholder="admin@frint.in"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
@@ -92,14 +109,14 @@ export default function Login() {
                 </label>
 
                 <label className="block">
-                  <span className="mb-2 block text-sm font-semibold">
+                  <span className="mb-2 block text-sm font-semibold text-[var(--frint-text)]">
                     Password
                   </span>
                   <div className="flex items-center gap-3 rounded-2xl border frint-border bg-[var(--frint-input)] px-4 py-3">
-                    <Lock size={18} className="frint-muted" />
+                    <Lock size={17} className="frint-muted" />
                     <input
                       type="password"
-                      className="w-full bg-transparent outline-none"
+                      className="w-full bg-transparent text-sm font-medium outline-none"
                       placeholder="Enter password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
@@ -109,7 +126,7 @@ export default function Login() {
                 </label>
 
                 {error && (
-                  <p className="rounded-2xl bg-red-50 dark:bg-red-950/30 px-4 py-3 text-sm font-medium text-red-700 dark:text-red-400">
+                  <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700 dark:bg-red-950/30 dark:text-red-300">
                     {error}
                   </p>
                 )}
@@ -117,14 +134,18 @@ export default function Login() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full rounded-2xl bg-[#0060f8] px-5 py-4 font-bold text-white shadow-lg shadow-blue-500/20 hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
+                  className="frint-primary-btn flex w-full items-center justify-center px-5 py-3 text-sm disabled:opacity-70"
                 >
                   {loading ? 'Logging in...' : 'Login'}
                 </button>
               </form>
+
+              <p className="mt-6 text-center text-xs frint-muted">
+                For Frint admins and campus ambassadors only.
+              </p>
             </div>
-          </section>
-        </div>
+          </div>
+        </section>
       </div>
     </main>
   )

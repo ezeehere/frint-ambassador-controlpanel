@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   ClipboardCheck,
   Copy,
@@ -13,17 +13,27 @@ import EmptyState from '../../components/ui/EmptyState'
 import StatusBadge from '../../components/ui/StatusBadge'
 import { supabase } from '../../lib/supabase'
 
+function makeReferralLink(refCode) {
+  return `${window.location.origin}/c/${refCode}`
+}
+
+function formatDate(value) {
+  if (!value) return 'No deadline'
+
+  return new Date(value).toLocaleDateString('en-IN', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
 export default function AmbassadorDashboard() {
   const [profile, setProfile] = useState(null)
-  const [stats, setStats] = useState({
-    leads: 0,
-    campaigns: 0,
-    tasks: 0,
-    points: 0,
-    rank: '-',
-  })
-  const [activeCampaign, setActiveCampaign] = useState(null)
+  const [assignments, setAssignments] = useState([])
+  const [leads, setLeads] = useState([])
   const [recentTasks, setRecentTasks] = useState([])
+  const [points, setPoints] = useState(0)
+  const [rank, setRank] = useState('-')
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState('')
 
@@ -110,7 +120,7 @@ export default function AmbassadorDashboard() {
         `)
         .eq('ambassador_id', user.id)
         .order('created_at', { ascending: false })
-        .limit(4),
+        .limit(5),
 
       supabase
         .from('points_log')
@@ -137,7 +147,7 @@ export default function AmbassadorDashboard() {
       setMessage(errors[0].message)
     }
 
-    const points = (pointsResult.data || []).reduce((sum, item) => {
+    const pointTotal = (pointsResult.data || []).reduce((sum, item) => {
       return sum + Number(item.points || 0)
     }, 0)
 
@@ -145,22 +155,12 @@ export default function AmbassadorDashboard() {
       (item) => item.ambassador_id === user.id
     )
 
-    const assignments = assignmentsResult.data || []
-    const leads = leadsResult.data || []
-    const tasks = taskAssignmentsResult.data || []
-
     setProfile(profileResult.data || null)
-
-    setStats({
-      leads: leads.length,
-      campaigns: assignments.length,
-      tasks: tasks.filter((item) => item.status === 'pending' || item.status === 'submitted').length,
-      points,
-      rank: rankIndex >= 0 ? rankIndex + 1 : '-',
-    })
-
-    setActiveCampaign(assignments[0] || null)
-    setRecentTasks(tasks)
+    setAssignments(assignmentsResult.data || [])
+    setLeads(leadsResult.data || [])
+    setRecentTasks(taskAssignmentsResult.data || [])
+    setPoints(pointTotal)
+    setRank(rankIndex >= 0 ? rankIndex + 1 : '-')
     setLoading(false)
   }
 
@@ -168,46 +168,77 @@ export default function AmbassadorDashboard() {
     loadDashboard()
   }, [])
 
-  const copyLink = async (refCode) => {
-    const link = `${window.location.origin}/c/${refCode}`
-    await navigator.clipboard.writeText(link)
-    alert('Referral link copied')
-  }
+  const activeCampaign = assignments[0] || null
 
-  const campaignLeadCount = activeCampaign
-    ? stats.leads
-    : 0
+  const leadCountsByCampaign = useMemo(() => {
+    const map = {}
 
-  const campaignTarget = activeCampaign?.target_count || 0
-  const progress =
-    campaignTarget > 0 ? Math.min((campaignLeadCount / campaignTarget) * 100, 100) : 0
+    for (const lead of leads) {
+      if (!map[lead.campaign_id]) {
+        map[lead.campaign_id] = {
+          total: 0,
+          converted: 0,
+          registered: 0,
+        }
+      }
+
+      map[lead.campaign_id].total += 1
+
+      if (lead.status === 'converted') {
+        map[lead.campaign_id].converted += 1
+      }
+
+      if (lead.status === 'registered') {
+        map[lead.campaign_id].registered += 1
+      }
+    }
+
+    return map
+  }, [leads])
+
+  const activeCampaignId = activeCampaign?.campaigns?.id
+  const activeCampaignLeads = leadCountsByCampaign[activeCampaignId]?.total || 0
+  const activeCampaignTarget = activeCampaign?.target_count || 0
+  const activeProgress =
+    activeCampaignTarget > 0
+      ? Math.min((activeCampaignLeads / activeCampaignTarget) * 100, 100)
+      : 0
+
+  const pendingTasks = recentTasks.filter((item) =>
+    ['pending', 'submitted'].includes(item.status)
+  ).length
 
   const statCards = [
     {
-      title: 'My leads',
-      value: stats.leads,
-      note: 'Students collected',
+      label: 'Leads',
+      value: leads.length,
+      note: 'Collected by you',
       icon: Flag,
     },
     {
-      title: 'Campaigns',
-      value: stats.campaigns,
-      note: 'Assigned active',
+      label: 'Campaigns',
+      value: assignments.length,
+      note: 'Active assigned',
       icon: Megaphone,
     },
     {
-      title: 'Tasks',
-      value: stats.tasks,
-      note: 'Pending/submitted',
+      label: 'Tasks',
+      value: pendingTasks,
+      note: 'Need attention',
       icon: ClipboardCheck,
     },
     {
-      title: 'Points',
-      value: stats.points,
-      note: `Rank ${stats.rank}`,
+      label: 'Points',
+      value: points,
+      note: `Rank ${rank}`,
       icon: Trophy,
     },
   ]
+
+  const copyLink = async (refCode) => {
+    await navigator.clipboard.writeText(makeReferralLink(refCode))
+    alert('Referral link copied')
+  }
 
   return (
     <DashboardLayout
@@ -216,169 +247,185 @@ export default function AmbassadorDashboard() {
       subtitle={
         profile?.full_name
           ? `Welcome, ${profile.full_name}`
-          : 'Track campaigns, leads, tasks, and points'
+          : 'Campaigns, tasks, leads and points'
       }
     >
       {message && (
-        <div className="mb-5 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+        <div className="mb-4 rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
           {message}
         </div>
       )}
 
-      <div className="mb-5 flex justify-end">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-semibold text-[var(--frint-text)]">
+            Today’s workspace
+          </p>
+          <p className="text-xs frint-muted">
+            Focus on links, tasks and proof uploads.
+          </p>
+        </div>
+
         <button
           onClick={loadDashboard}
-          className="frint-secondary-btn flex items-center gap-2 px-5 py-2.5 text-sm"
+          className="frint-secondary-btn flex items-center gap-2 px-3 py-2 text-sm"
         >
-          <RefreshCw size={16} />
-          Refresh
+          <RefreshCw size={15} />
+          <span className="hidden sm:inline">Refresh</span>
         </button>
       </div>
 
-      <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
         {statCards.map((item) => {
           const Icon = item.icon
 
           return (
-            <div key={item.title} className="frint-card rounded-[28px] p-5">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-[#0060f8]">
-                <Icon size={22} />
+            <section
+              key={item.label}
+              className="frint-card rounded-[20px] p-3.5"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-xs font-medium frint-muted">{item.label}</p>
+                  <p className="mt-1 text-2xl font-semibold tracking-[-0.04em] text-[var(--frint-text)]">
+                    {loading ? '...' : item.value}
+                  </p>
+                </div>
+
+                <span className="frint-icon-chip h-9 w-9 rounded-2xl">
+                  <Icon size={16} />
+                </span>
               </div>
 
-              <p className="mt-5 text-sm font-bold frint-muted">
-                {item.title}
-              </p>
-
-              <p className="mt-1 text-4xl font-black text-[var(--frint-text)]">
-                {loading ? '...' : item.value}
-              </p>
-
-              <p className="mt-2 text-sm frint-muted">
+              <p className="mt-2 truncate text-[11px] font-medium frint-muted">
                 {item.note}
               </p>
-            </div>
+            </section>
           )
         })}
       </div>
 
-      <div className="mt-6 grid gap-6 xl:grid-cols-[1.25fr_0.85fr]">
-        <section className="frint-card rounded-[30px] p-6">
-          <div className="flex items-center justify-between gap-4">
+      <div className="mt-4 grid gap-4 xl:grid-cols-[1.25fr_0.75fr]">
+        <section className="frint-card rounded-[24px] p-4">
+          <div className="flex items-center justify-between gap-3">
             <div>
-              <h2 className="text-xl font-black text-[var(--frint-text)]">
-                Active campaign
+              <h2 className="text-lg font-semibold text-[var(--frint-text)]">
+                Next campaign to share
               </h2>
-              <p className="mt-1 text-sm frint-muted">
-                Your latest assigned campaign
+              <p className="text-sm frint-muted">
+                Your latest active referral link
               </p>
             </div>
 
-            <Link2 className="text-[#0060f8]" size={24} />
+            <Link2 className="text-[var(--frint-accent)]" size={20} />
           </div>
 
           {!activeCampaign ? (
-            <div className="mt-5">
+            <div className="mt-4">
               <EmptyState
                 title="No active campaign"
-                message="Frint campaigns assigned to you will appear here."
+                message="Assigned campaigns will appear here."
               />
             </div>
           ) : (
-            <>
-              <div className="mt-6 rounded-[24px] bg-[var(--frint-soft-card)] p-5">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div>
-                    <h3 className="text-2xl font-black text-[var(--frint-text)]">
-                      {activeCampaign.campaigns?.title}
+            <div className="mt-4 rounded-[22px] border frint-border bg-[var(--frint-soft-card)] p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="truncate text-lg font-semibold text-[var(--frint-text)]">
+                      {activeCampaign.campaigns?.title || 'Campaign'}
                     </h3>
-
-                    <p className="mt-1 text-sm font-bold capitalize frint-muted">
-                      {activeCampaign.campaigns?.type?.replaceAll('_', ' ')}
-                    </p>
+                    <StatusBadge status={activeCampaign.status} />
                   </div>
 
-                  <StatusBadge status={activeCampaign.status} />
-                </div>
+                  <p className="mt-1 text-sm capitalize frint-muted">
+                    {activeCampaign.campaigns?.type?.replaceAll('_', ' ') || 'Campaign'}
+                  </p>
 
-                <div className="mt-5">
-                  <div className="mb-2 flex items-center justify-between text-xs font-black frint-muted">
-                    <span>Progress</span>
-                    <span>{Math.round(progress)}%</span>
-                  </div>
-
-                  <div className="h-[5px] overflow-hidden rounded-full bg-[var(--frint-card)]">
-                    <div
-                      className="h-full rounded-full bg-[#0060f8]"
-                      style={{ width: `${progress}%` }}
-                    />
-                  </div>
-
-                  <p className="mt-2 text-xs font-bold frint-muted">
-                    {campaignLeadCount}/{campaignTarget || 0} leads
+                  <p className="mt-2 text-xs font-medium frint-muted">
+                    Deadline: {formatDate(activeCampaign.deadline)}
                   </p>
                 </div>
-              </div>
-
-              <div className="mt-5 rounded-[22px] border frint-border bg-[var(--frint-soft-card)] p-4">
-                <p className="text-xs font-black uppercase tracking-wide frint-muted">
-                  Referral link
-                </p>
-
-                <p className="mt-2 break-all text-sm font-bold text-[var(--frint-text)]">
-                  {`${window.location.origin}/c/${activeCampaign.ref_code}`}
-                </p>
 
                 <button
                   onClick={() => copyLink(activeCampaign.ref_code)}
-                  className="frint-primary-btn mt-4 flex items-center justify-center gap-2 px-5 py-3 text-sm"
+                  className="frint-primary-btn flex items-center justify-center gap-2 px-4 py-2 text-sm"
                 >
-                  <Copy size={16} />
+                  <Copy size={15} />
                   Copy link
                 </button>
               </div>
-            </>
+
+              <div className="mt-4 grid grid-cols-3 gap-2">
+                <div className="rounded-2xl bg-[var(--frint-card)] px-3 py-2">
+                  <p className="text-[11px] frint-muted">Leads</p>
+                  <p className="text-lg font-semibold">{activeCampaignLeads}</p>
+                </div>
+                <div className="rounded-2xl bg-[var(--frint-card)] px-3 py-2">
+                  <p className="text-[11px] frint-muted">Target</p>
+                  <p className="text-lg font-semibold">{activeCampaignTarget}</p>
+                </div>
+                <div className="rounded-2xl bg-[var(--frint-card)] px-3 py-2">
+                  <p className="text-[11px] frint-muted">Progress</p>
+                  <p className="text-lg font-semibold">{Math.round(activeProgress)}%</p>
+                </div>
+              </div>
+
+              <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[var(--frint-card)]">
+                <div
+                  className="h-full rounded-full bg-[var(--frint-accent)]"
+                  style={{ width: `${activeProgress}%` }}
+                />
+              </div>
+            </div>
           )}
         </section>
 
-        <section className="frint-card rounded-[30px] p-6">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-[#0060f8]">
-              <Trophy size={21} />
+        <section className="frint-card rounded-[24px] p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold text-[var(--frint-text)]">
+                Leaderboard
+              </h2>
+              <p className="text-sm frint-muted">
+                Your current standing
+              </p>
             </div>
 
-            <div>
-              <h2 className="text-xl font-black text-[var(--frint-text)]">
-                My rank
-              </h2>
-              <p className="text-sm frint-muted">Leaderboard position</p>
-            </div>
+            <Trophy className="text-[var(--frint-accent)]" size={20} />
           </div>
 
-          <div className="mt-6 rounded-[24px] bg-[#0060f8] p-6 text-white">
-            <p className="text-sm font-bold text-white/75">Current rank</p>
-            <p className="mt-2 text-6xl font-black">
-              {stats.rank}
-            </p>
-            <p className="mt-3 text-sm font-bold text-white/80">
-              {stats.points} total points
-            </p>
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <div className="rounded-[20px] bg-[var(--frint-soft-card)] p-4">
+              <p className="text-xs font-medium frint-muted">Rank</p>
+              <p className="mt-1 text-3xl font-semibold tracking-[-0.05em]">
+                {rank}
+              </p>
+            </div>
+
+            <div className="rounded-[20px] bg-[var(--frint-soft-card)] p-4">
+              <p className="text-xs font-medium frint-muted">Points</p>
+              <p className="mt-1 text-3xl font-semibold tracking-[-0.05em]">
+                {points}
+              </p>
+            </div>
           </div>
         </section>
       </div>
 
-      <section className="frint-card mt-6 rounded-[30px] p-6">
-        <div className="flex items-center justify-between gap-4">
+      <section className="frint-card mt-4 rounded-[24px] p-4">
+        <div className="flex items-center justify-between gap-3">
           <div>
-            <h2 className="text-xl font-black text-[var(--frint-text)]">
+            <h2 className="text-lg font-semibold text-[var(--frint-text)]">
               Recent tasks
             </h2>
-            <p className="mt-1 text-sm frint-muted">
-              Your latest assigned tasks
+            <p className="text-sm frint-muted">
+              Proofs and assignments from Frint
             </p>
           </div>
         </div>
 
-        <div className="mt-5 space-y-3">
+        <div className="mt-4 grid gap-2.5">
           {recentTasks.length === 0 ? (
             <EmptyState
               title="No tasks assigned"
@@ -386,21 +433,23 @@ export default function AmbassadorDashboard() {
             />
           ) : (
             recentTasks.map((assignment) => (
-              <div
+              <article
                 key={assignment.id}
-                className="flex flex-col gap-3 rounded-[22px] border frint-border px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
+                className="rounded-[18px] border frint-border bg-[var(--frint-soft-card)] p-3"
               >
-                <div>
-                  <p className="font-black text-[var(--frint-text)]">
-                    {assignment.tasks?.title || 'Task'}
-                  </p>
-                  <p className="mt-1 text-sm frint-muted">
-                    {assignment.tasks?.campaigns?.title || 'No campaign'} • {assignment.tasks?.points || 0} points
-                  </p>
-                </div>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-[var(--frint-text)]">
+                      {assignment.tasks?.title || 'Task'}
+                    </p>
+                    <p className="mt-1 truncate text-xs frint-muted">
+                      {assignment.tasks?.campaigns?.title || 'No campaign'} • {assignment.tasks?.points || 0} points
+                    </p>
+                  </div>
 
-                <StatusBadge status={assignment.status} />
-              </div>
+                  <StatusBadge status={assignment.status} />
+                </div>
+              </article>
             ))
           )}
         </div>

@@ -3,12 +3,15 @@ import { Link, useParams } from 'react-router-dom'
 import {
     ArrowLeft,
     Copy,
+    FileText,
     Link2,
     Loader2,
     Megaphone,
+    Pencil,
     Plus,
     RefreshCw,
     Target,
+    UserPlus,
     Users,
 } from 'lucide-react'
 import DashboardLayout from '../../components/layout/DashboardLayout'
@@ -34,11 +37,46 @@ function formatLabel(value) {
 }
 
 function formatCustomValue(value) {
+    if (Array.isArray(value)) return value.join(', ')
     if (typeof value === 'boolean') return value ? 'Yes' : 'No'
     if (value === null || value === undefined || value === '') return 'Not answered'
     if (typeof value === 'object') return JSON.stringify(value)
 
     return String(value)
+}
+
+function shortDate(date) {
+    if (!date) return 'No date'
+    return new Date(date).toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+    })
+}
+
+function CustomAnswers({ answers }) {
+    const entries = Object.entries(answers || {})
+
+    if (entries.length === 0) return null
+
+    return (
+        <div className="mt-3 rounded-[16px] bg-[var(--frint-soft-card)] p-3">
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide frint-muted">
+                Custom answers
+            </p>
+
+            <div className="space-y-1">
+                {entries.map(([key, value]) => (
+                    <p key={key} className="text-sm font-medium frint-muted">
+                        <span className="font-semibold capitalize text-[var(--frint-text)]">
+                            {key.replaceAll('_', ' ')}:
+                        </span>{' '}
+                        {formatCustomValue(value)}
+                    </p>
+                ))}
+            </div>
+        </div>
+    )
 }
 
 export default function CampaignDetails() {
@@ -53,6 +91,8 @@ export default function CampaignDetails() {
     const [savingStatus, setSavingStatus] = useState(false)
     const [assigning, setAssigning] = useState(false)
     const [message, setMessage] = useState('')
+    const [showAssignBox, setShowAssignBox] = useState(false)
+    const [showSettings, setShowSettings] = useState(false)
 
     const [assignmentForm, setAssignmentForm] = useState({
         ambassador_id: '',
@@ -170,10 +210,7 @@ export default function CampaignDetails() {
 
         const result = await supabase
             .from('campaigns')
-            .update({
-                status,
-                updated_at: new Date().toISOString(),
-            })
+            .update({ status })
             .eq('id', campaign.id)
 
         if (result.error) {
@@ -227,6 +264,7 @@ export default function CampaignDetails() {
             deadline: '',
         })
 
+        setShowAssignBox(false)
         await loadData()
         setAssigning(false)
     }
@@ -260,9 +298,9 @@ export default function CampaignDetails() {
                 title="Campaign Details"
                 subtitle="Loading campaign"
             >
-                <div className="frint-card flex items-center justify-center gap-3 rounded-[30px] p-8">
-                    <Loader2 className="animate-spin text-[#0060f8]" size={22} />
-                    <p className="text-sm font-black frint-muted">Loading campaign...</p>
+                <div className="frint-card flex items-center justify-center gap-3 rounded-[24px] p-6">
+                    <Loader2 className="animate-spin text-[var(--frint-accent)]" size={21} />
+                    <p className="text-sm font-semibold frint-muted">Loading campaign...</p>
                 </div>
             </DashboardLayout>
         )
@@ -286,63 +324,95 @@ export default function CampaignDetails() {
     const progressPercent = Math.min(Number(progress?.progress_percent || 0), 100)
     const formSchema = Array.isArray(campaign.form_schema) ? campaign.form_schema : []
 
+    const stats = [
+        {
+            label: 'Progress',
+            value: `${progress?.total_leads || 0}/${campaign.target_count || 0}`,
+            icon: Target,
+        },
+        {
+            label: 'Assigned',
+            value: assignments.length,
+            icon: Users,
+        },
+        {
+            label: 'Registered',
+            value: progress?.registered_leads || 0,
+            icon: FileText,
+        },
+        {
+            label: 'Converted',
+            value: progress?.converted_leads || 0,
+            icon: Megaphone,
+        },
+    ]
+
     return (
         <DashboardLayout
             role="admin"
             title="Campaign Details"
             subtitle={campaign.title}
         >
-            <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="mb-4 flex items-center justify-between gap-2">
                 <Link
                     to="/admin/campaigns"
-                    className="frint-secondary-btn flex w-fit items-center gap-2 px-5 py-2.5 text-sm"
+                    className="frint-secondary-btn flex items-center gap-2 px-3.5 py-2 text-sm"
                 >
-                    <ArrowLeft size={16} />
-                    Back to campaigns
+                    <ArrowLeft size={15} />
+                    Back
                 </Link>
 
                 <button
                     onClick={loadData}
-                    className="frint-secondary-btn flex w-fit items-center gap-2 px-5 py-2.5 text-sm"
+                    className="frint-secondary-btn flex items-center gap-2 px-3.5 py-2 text-sm"
                 >
-                    <RefreshCw size={16} />
+                    <RefreshCw size={15} />
                     Refresh
                 </button>
             </div>
 
             {message && (
-                <div className="mb-5 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+                <div className="mb-4 rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
                     {message}
                 </div>
             )}
 
-            <section className="frint-card rounded-[30px] p-6">
-                <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-                    <div>
+            <section className="frint-card rounded-[24px] p-4 sm:p-5">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                            <h1 className="text-3xl font-black text-[var(--frint-text)]">
+                            <h1 className="text-[22px] font-semibold leading-tight tracking-[-0.04em] text-[var(--frint-text)] sm:text-[26px]">
                                 {campaign.title}
                             </h1>
                             <StatusBadge status={campaign.status} />
                         </div>
 
-                        <p className="mt-3 text-sm font-bold capitalize frint-muted">
+                        <p className="mt-2 text-sm font-medium capitalize frint-muted">
                             {formatLabel(campaign.type)} • {formatLabel(campaign.action_mode)} • {formatLabel(campaign.form_type)}
                         </p>
 
                         {campaign.description && (
-                            <p className="mt-4 max-w-3xl text-sm font-bold leading-6 frint-muted">
+                            <p className="mt-3 max-w-3xl text-sm leading-6 frint-muted">
                                 {campaign.description}
                             </p>
                         )}
                     </div>
 
-                    <div className="flex flex-col gap-3 sm:flex-row">
+                    <div className="grid grid-cols-2 gap-2 sm:flex sm:shrink-0">
+                        <button
+                            type="button"
+                            onClick={() => setShowSettings((value) => !value)}
+                            className="frint-secondary-btn flex items-center justify-center gap-2 px-3.5 py-2 text-sm"
+                        >
+                            <Pencil size={15} />
+                            Edit
+                        </button>
+
                         <select
                             value={campaign.status || 'draft'}
                             onChange={(e) => updateCampaignStatus(e.target.value)}
                             disabled={savingStatus}
-                            className="rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none disabled:opacity-60"
+                            className="rounded-full border frint-border bg-[var(--frint-card)] px-3 py-2 text-sm font-medium outline-none disabled:opacity-60"
                         >
                             <option value="draft">Draft</option>
                             <option value="active">Active</option>
@@ -352,140 +422,148 @@ export default function CampaignDetails() {
                     </div>
                 </div>
 
-                <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                    <div className="rounded-[24px] bg-[var(--frint-soft-card)] p-5">
-                        <div className="flex items-center gap-2 text-[#0060f8]">
-                            <Target size={18} />
-                            <p className="text-sm font-black">Progress</p>
-                        </div>
-                        <p className="mt-2 text-3xl font-black text-[var(--frint-text)]">
-                            {progress?.total_leads || 0}/{campaign.target_count || 0}
-                        </p>
-                    </div>
+                <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    {stats.map((item) => {
+                        const Icon = item.icon
 
-                    <div className="rounded-[24px] bg-[var(--frint-soft-card)] p-5">
-                        <div className="flex items-center gap-2 text-[#0060f8]">
-                            <Users size={18} />
-                            <p className="text-sm font-black">Assigned</p>
-                        </div>
-                        <p className="mt-2 text-3xl font-black text-[var(--frint-text)]">
-                            {assignments.length}
-                        </p>
-                    </div>
+                        return (
+                            <div
+                                key={item.label}
+                                className="rounded-[18px] bg-[var(--frint-soft-card)] px-3 py-3"
+                            >
+                                <div className="flex items-center gap-1.5 text-[var(--frint-accent)]">
+                                    <Icon size={14} />
+                                    <p className="truncate text-[11px] font-semibold">{item.label}</p>
+                                </div>
 
-                    <div className="rounded-[24px] bg-[var(--frint-soft-card)] p-5">
-                        <p className="text-sm font-black frint-muted">Registered</p>
-                        <p className="mt-2 text-3xl font-black text-[var(--frint-text)]">
-                            {progress?.registered_leads || 0}
-                        </p>
-                    </div>
-
-                    <div className="rounded-[24px] bg-[var(--frint-soft-card)] p-5">
-                        <p className="text-sm font-black frint-muted">Converted</p>
-                        <p className="mt-2 text-3xl font-black text-[var(--frint-text)]">
-                            {progress?.converted_leads || 0}
-                        </p>
-                    </div>
+                                <p className="mt-1 text-[18px] font-semibold text-[var(--frint-text)]">
+                                    {item.value}
+                                </p>
+                            </div>
+                        )
+                    })}
                 </div>
 
-                <div className="mt-5">
-                    <div className="mb-2 flex items-center justify-between text-xs font-black frint-muted">
+                <div className="mt-4">
+                    <div className="mb-1.5 flex items-center justify-between text-[11px] font-semibold frint-muted">
                         <span>Campaign progress</span>
                         <span>{Math.round(progressPercent)}%</span>
                     </div>
 
-                    <div className="h-[5px] overflow-hidden rounded-full bg-[var(--frint-soft-card)]">
+                    <div className="h-1.5 overflow-hidden rounded-full bg-[var(--frint-soft-card)]">
                         <div
-                            className="h-full rounded-full bg-[#0060f8]"
+                            className="h-full rounded-full bg-[var(--frint-accent)]"
                             style={{ width: `${progressPercent}%` }}
                         />
                     </div>
                 </div>
             </section>
 
-            <div className="mt-6 grid gap-6 xl:grid-cols-[1fr_0.85fr]">
-                <section className="frint-card rounded-[30px] p-6">
-                    <div className="flex items-center gap-3">
-                        <Megaphone className="text-[#0060f8]" size={24} />
+            {showSettings && (
+                <div className="mt-4">
+                    <CampaignSettingsEditor
+                        campaign={campaign}
+                        onUpdated={loadData}
+                    />
+                </div>
+            )}
+
+            <div className="mt-4 grid gap-4 xl:grid-cols-[1fr_0.72fr]">
+                <section className="frint-card rounded-[24px] p-4 sm:p-5">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div>
-                            <h2 className="text-xl font-black text-[var(--frint-text)]">
+                            <h2 className="text-lg font-semibold text-[var(--frint-text)]">
                                 Assigned ambassadors
                             </h2>
-                            <p className="text-sm frint-muted">
-                                Referral links and ambassador targets
+                            <p className="mt-0.5 text-sm frint-muted">
+                                Referral links and targets
                             </p>
                         </div>
-                    </div>
 
-                    <div className="mt-5 rounded-[24px] border frint-border bg-[var(--frint-soft-card)] p-4">
-                        <p className="mb-3 text-sm font-black text-[var(--frint-text)]">
+                        <button
+                            type="button"
+                            onClick={() => setShowAssignBox((value) => !value)}
+                            className="frint-secondary-btn flex items-center justify-center gap-2 px-4 py-2 text-sm"
+                        >
+                            <UserPlus size={15} />
                             Add ambassador
-                        </p>
-
-                        {activeUnassignedAmbassadors.length === 0 ? (
-                            <p className="text-sm font-bold frint-muted">
-                                All active ambassadors are already assigned to this campaign.
-                            </p>
-                        ) : (
-                            <div className="grid gap-3 lg:grid-cols-[1.2fr_0.7fr_0.8fr_auto]">
-                                <select
-                                    value={assignmentForm.ambassador_id}
-                                    onChange={(e) =>
-                                        setAssignmentForm({
-                                            ...assignmentForm,
-                                            ambassador_id: e.target.value,
-                                        })
-                                    }
-                                    className="rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
-                                >
-                                    <option value="">Select ambassador</option>
-                                    {activeUnassignedAmbassadors.map((ambassador) => (
-                                        <option key={ambassador.id} value={ambassador.id}>
-                                            {ambassador.full_name || ambassador.email}
-                                        </option>
-                                    ))}
-                                </select>
-
-                                <input
-                                    type="number"
-                                    min="0"
-                                    value={assignmentForm.target_count}
-                                    onChange={(e) =>
-                                        setAssignmentForm({
-                                            ...assignmentForm,
-                                            target_count: e.target.value,
-                                        })
-                                    }
-                                    className="rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
-                                    placeholder="Target"
-                                />
-
-                                <input
-                                    type="date"
-                                    value={assignmentForm.deadline}
-                                    onChange={(e) =>
-                                        setAssignmentForm({
-                                            ...assignmentForm,
-                                            deadline: e.target.value,
-                                        })
-                                    }
-                                    className="rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
-                                />
-
-                                <button
-                                    type="button"
-                                    disabled={assigning}
-                                    onClick={assignAmbassador}
-                                    className="frint-primary-btn flex items-center justify-center gap-2 px-5 py-3 text-sm disabled:opacity-60"
-                                >
-                                    <Plus size={16} />
-                                    {assigning ? 'Adding...' : 'Add'}
-                                </button>
-                            </div>
-                        )}
+                        </button>
                     </div>
 
-                    <div className="mt-5 space-y-3">
+                    {showAssignBox && (
+                        <div className="mt-4 rounded-[18px] border frint-border bg-[var(--frint-soft-card)] p-3">
+                            <p className="text-sm font-semibold text-[var(--frint-text)]">
+                                Add ambassador
+                            </p>
+                            <p className="mt-0.5 text-xs frint-muted">
+                                This creates a personal referral link for the selected ambassador.
+                            </p>
+
+                            {activeUnassignedAmbassadors.length === 0 ? (
+                                <p className="mt-3 text-sm font-medium frint-muted">
+                                    All active ambassadors are already assigned to this campaign.
+                                </p>
+                            ) : (
+                                <div className="mt-3 grid gap-2 lg:grid-cols-[1.2fr_0.7fr_0.8fr_auto]">
+                                    <select
+                                        value={assignmentForm.ambassador_id}
+                                        onChange={(e) =>
+                                            setAssignmentForm({
+                                                ...assignmentForm,
+                                                ambassador_id: e.target.value,
+                                            })
+                                        }
+                                        className="frint-input"
+                                    >
+                                        <option value="">Select ambassador</option>
+                                        {activeUnassignedAmbassadors.map((ambassador) => (
+                                            <option key={ambassador.id} value={ambassador.id}>
+                                                {ambassador.full_name || ambassador.email}
+                                            </option>
+                                        ))}
+                                    </select>
+
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={assignmentForm.target_count}
+                                        onChange={(e) =>
+                                            setAssignmentForm({
+                                                ...assignmentForm,
+                                                target_count: e.target.value,
+                                            })
+                                        }
+                                        className="frint-input"
+                                        placeholder="Target"
+                                    />
+
+                                    <input
+                                        type="date"
+                                        value={assignmentForm.deadline}
+                                        onChange={(e) =>
+                                            setAssignmentForm({
+                                                ...assignmentForm,
+                                                deadline: e.target.value,
+                                            })
+                                        }
+                                        className="frint-input"
+                                    />
+
+                                    <button
+                                        type="button"
+                                        disabled={assigning}
+                                        onClick={assignAmbassador}
+                                        className="frint-primary-btn flex items-center justify-center gap-2 px-5 py-2 text-sm disabled:opacity-60"
+                                    >
+                                        <Plus size={15} />
+                                        {assigning ? 'Adding...' : 'Add'}
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    <div className="mt-4 space-y-2">
                         {assignments.length === 0 ? (
                             <EmptyState
                                 title="No ambassadors assigned"
@@ -494,68 +572,67 @@ export default function CampaignDetails() {
                         ) : (
                             assignments.map((assignment) => {
                                 const ambassador = getAmbassadorById(assignment.ambassador_id)
-                                const link = `${window.location.origin}/c/${assignment.ref_code}`
 
                                 return (
-                                    <div
+                                    <article
                                         key={assignment.id}
-                                        className="rounded-[22px] border frint-border p-4"
+                                        className="rounded-[18px] border frint-border p-3"
                                     >
-                                        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                             <div className="min-w-0">
-                                                <p className="font-black text-[var(--frint-text)]">
+                                                <p className="truncate text-sm font-semibold text-[var(--frint-text)]">
                                                     {ambassador?.full_name || ambassador?.email || 'Ambassador'}
                                                 </p>
 
-                                                <p className="mt-1 text-sm frint-muted">
+                                                <p className="mt-0.5 text-xs frint-muted">
                                                     Target {assignment.target_count || 0}
-                                                    {assignment.deadline ? ` • Deadline ${assignment.deadline}` : ''}
+                                                    {assignment.deadline ? ` • ${shortDate(assignment.deadline)}` : ''}
                                                 </p>
 
-                                                <p className="mt-2 break-all text-sm font-bold frint-muted">
-                                                    {link}
+                                                <p className="mt-1 truncate text-xs frint-muted">
+                                                    /c/{assignment.ref_code}
                                                 </p>
                                             </div>
 
                                             <button
                                                 onClick={() => copyReferralLink(assignment.ref_code)}
-                                                className="frint-secondary-btn flex items-center justify-center gap-2 px-4 py-2 text-sm"
+                                                className="frint-secondary-btn flex items-center justify-center gap-2 px-3.5 py-2 text-sm"
                                             >
-                                                <Copy size={15} />
+                                                <Copy size={14} />
                                                 Copy
                                             </button>
                                         </div>
-                                    </div>
+                                    </article>
                                 )
                             })
                         )}
                     </div>
                 </section>
 
-                <section className="frint-card rounded-[30px] p-6">
-                    <div className="flex items-center gap-3">
-                        <Link2 className="text-[#0060f8]" size={24} />
+                <section className="frint-card rounded-[24px] p-4 sm:p-5">
+                    <div className="flex items-center gap-2">
+                        <Link2 className="text-[var(--frint-accent)]" size={19} />
                         <div>
-                            <h2 className="text-xl font-black text-[var(--frint-text)]">
-                                Campaign form
+                            <h2 className="text-lg font-semibold text-[var(--frint-text)]">
+                                Form preview
                             </h2>
                             <p className="text-sm frint-muted">
-                                Fields used on public referral form
+                                Fields shown on the public form
                             </p>
                         </div>
                     </div>
 
-                    <div className="mt-5 rounded-[24px] bg-[var(--frint-soft-card)] p-4">
-                        <p className="text-sm font-black text-[var(--frint-text)]">
+                    <div className="mt-4 rounded-[18px] bg-[var(--frint-soft-card)] p-3">
+                        <p className="text-xs font-semibold uppercase tracking-wide frint-muted">
                             Form type
                         </p>
-                        <p className="mt-1 text-sm font-bold capitalize frint-muted">
+                        <p className="mt-1 text-sm font-semibold capitalize text-[var(--frint-text)]">
                             {formatLabel(campaign.form_type)}
                         </p>
                     </div>
 
                     {campaign.form_type === 'custom_form' ? (
-                        <div className="mt-4 space-y-3">
+                        <div className="mt-3 space-y-2">
                             {formSchema.length === 0 ? (
                                 <EmptyState
                                     title="No custom fields"
@@ -565,71 +642,121 @@ export default function CampaignDetails() {
                                 formSchema.map((field, index) => (
                                     <div
                                         key={field.id || index}
-                                        className="rounded-[20px] border frint-border p-4"
+                                        className="rounded-[16px] border frint-border p-3"
                                     >
-                                        <p className="font-black text-[var(--frint-text)]">
+                                        <p className="text-sm font-semibold text-[var(--frint-text)]">
                                             {field.label || `Field ${index + 1}`}
                                         </p>
-                                        <p className="mt-1 text-sm font-bold frint-muted">
-                                            {field.type} • key: {field.name || 'not_set'}
-                                            {field.required ? ' • required' : ''}
+                                        <p className="mt-0.5 text-xs frint-muted">
+                                            {field.type} {field.required ? '• required' : ''}
                                         </p>
-
-                                        {field.options?.length > 0 && (
-                                            <p className="mt-2 text-sm frint-muted">
-                                                Options: {field.options.join(', ')}
-                                            </p>
-                                        )}
                                     </div>
                                 ))
                             )}
                         </div>
                     ) : (
-                        <p className="mt-4 text-sm font-bold frint-muted">
+                        <p className="mt-3 text-sm font-medium frint-muted">
                             This campaign uses a predefined Frint form.
                         </p>
                     )}
                 </section>
             </div>
 
-            <div className="mt-6">
-                <CampaignSettingsEditor
-                    campaign={campaign}
-                    onUpdated={loadData}
-                />
-            </div>
-
-            <section className="frint-card mt-6 rounded-[30px] p-6">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <h2 className="text-xl font-black text-[var(--frint-text)]">
-                            Campaign leads
-                        </h2>
-                        <p className="mt-1 text-sm frint-muted">
-                            {leads.length} submissions from this campaign
-                        </p>
-                    </div>
+            <section className="frint-card mt-4 rounded-[24px] p-4 sm:p-5">
+                <div>
+                    <h2 className="text-lg font-semibold text-[var(--frint-text)]">
+                        Campaign leads
+                    </h2>
+                    <p className="mt-0.5 text-sm frint-muted">
+                        {leads.length} submissions from this campaign
+                    </p>
                 </div>
 
-                <div className="mt-5 rounded-[24px] border frint-border">
-                    {leads.length === 0 ? (
-                        <div className="p-5">
-                            <EmptyState
-                                title="No leads yet"
-                                message="Share referral links to collect leads."
-                            />
+                {leads.length === 0 ? (
+                    <div className="mt-4">
+                        <EmptyState
+                            title="No leads yet"
+                            message="Share referral links to collect leads."
+                        />
+                    </div>
+                ) : (
+                    <>
+                        <div className="mt-4 grid gap-3 lg:hidden">
+                            {leads.map((lead) => {
+                                const ambassador = getAmbassadorById(lead.ambassador_id)
+                                const customAnswers = lead.raw_answers?.custom_answers || {}
+
+                                return (
+                                    <article
+                                        key={lead.id}
+                                        className="rounded-[18px] border frint-border p-3"
+                                    >
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div className="min-w-0">
+                                                <p className="truncate text-sm font-semibold text-[var(--frint-text)]">
+                                                    {lead.student_name || 'Unnamed'}
+                                                </p>
+                                                <p className="mt-0.5 text-xs frint-muted">
+                                                    {lead.phone || 'No phone'}
+                                                    {lead.email ? ` • ${lead.email}` : ''}
+                                                </p>
+                                            </div>
+
+                                            <StatusBadge status={lead.status} />
+                                        </div>
+
+                                        <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                                            <div className="rounded-[14px] bg-[var(--frint-soft-card)] p-2">
+                                                <p className="font-semibold frint-muted">Ambassador</p>
+                                                <p className="mt-0.5 truncate text-[var(--frint-text)]">
+                                                    {ambassador?.full_name || ambassador?.email || 'Unknown'}
+                                                </p>
+                                            </div>
+
+                                            <div className="rounded-[14px] bg-[var(--frint-soft-card)] p-2">
+                                                <p className="font-semibold frint-muted">College</p>
+                                                <p className="mt-0.5 truncate text-[var(--frint-text)]">
+                                                    {lead.colleges?.name || 'Not selected'}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <p className="mt-3 text-xs frint-muted">
+                                            {lead.course || 'Course not added'}
+                                            {lead.year ? ` • ${lead.year}` : ''}
+                                        </p>
+                                        <p className="mt-1 text-xs frint-muted">
+                                            {lead.interest || 'Interest not added'}
+                                        </p>
+
+                                        <CustomAnswers answers={customAnswers} />
+
+                                        <select
+                                            value={lead.status || 'new'}
+                                            onChange={(e) => updateLeadStatus(lead.id, e.target.value)}
+                                            className="frint-input mt-3"
+                                        >
+                                            <option value="new">New</option>
+                                            <option value="contacted">Contacted</option>
+                                            <option value="registered">Registered</option>
+                                            <option value="converted">Converted</option>
+                                            <option value="rejected">Rejected</option>
+                                        </select>
+                                    </article>
+                                )
+                            })}
                         </div>
-                    ) : (
-                        <div className="overflow-x-auto">
-                            <table className="min-w-[1100px] w-full text-left">
+
+                        <div className="frint-table-wrap mt-4 hidden rounded-[18px] border frint-border lg:block">
+                            <table className="w-full min-w-[980px] text-left">
                                 <thead className="border-b frint-border bg-[var(--frint-soft-card)]">
                                     <tr>
-                                        <th className="px-4 py-4 text-xs font-black uppercase frint-muted">Student</th>
-                                        <th className="px-4 py-4 text-xs font-black uppercase frint-muted">Ambassador</th>
-                                        <th className="px-4 py-4 text-xs font-black uppercase frint-muted">College</th>
-                                        <th className="px-4 py-4 text-xs font-black uppercase frint-muted">Details</th>
-                                        <th className="px-4 py-4 text-xs font-black uppercase frint-muted">Status</th>
-                                        <th className="px-4 py-4 text-xs font-black uppercase frint-muted">Update</th>
+                                        <th className="px-4 py-3 text-xs font-semibold uppercase frint-muted">Student</th>
+                                        <th className="px-4 py-3 text-xs font-semibold uppercase frint-muted">Ambassador</th>
+                                        <th className="px-4 py-3 text-xs font-semibold uppercase frint-muted">College</th>
+                                        <th className="px-4 py-3 text-xs font-semibold uppercase frint-muted">Details</th>
+                                        <th className="px-4 py-3 text-xs font-semibold uppercase frint-muted">Status</th>
+                                        <th className="px-4 py-3 text-xs font-semibold uppercase frint-muted">Update</th>
                                     </tr>
                                 </thead>
 
@@ -641,11 +768,11 @@ export default function CampaignDetails() {
                                         return (
                                             <tr key={lead.id} className="border-b frint-border last:border-b-0">
                                                 <td className="px-4 py-4 align-top">
-                                                    <p className="font-black text-[var(--frint-text)]">
-                                                        {lead.student_name}
+                                                    <p className="font-semibold text-[var(--frint-text)]">
+                                                        {lead.student_name || 'Unnamed'}
                                                     </p>
                                                     <p className="mt-1 text-sm frint-muted">
-                                                        {lead.phone}
+                                                        {lead.phone || 'No phone'}
                                                     </p>
                                                     {lead.email && (
                                                         <p className="mt-1 text-sm frint-muted">
@@ -654,41 +781,24 @@ export default function CampaignDetails() {
                                                     )}
                                                 </td>
 
-                                                <td className="px-4 py-4 align-top text-sm font-bold frint-muted">
+                                                <td className="px-4 py-4 align-top text-sm font-medium frint-muted">
                                                     {ambassador?.full_name || ambassador?.email || 'Unknown'}
                                                 </td>
 
-                                                <td className="px-4 py-4 align-top text-sm font-bold frint-muted">
+                                                <td className="px-4 py-4 align-top text-sm font-medium frint-muted">
                                                     {lead.colleges?.name || 'Not selected'}
                                                 </td>
 
                                                 <td className="px-4 py-4 align-top">
-                                                    <p className="text-sm font-bold frint-muted">
+                                                    <p className="text-sm font-medium frint-muted">
                                                         {lead.course || 'Course not added'}
                                                         {lead.year ? ` • ${lead.year}` : ''}
                                                     </p>
-                                                    <p className="mt-1 text-sm font-bold frint-muted">
+                                                    <p className="mt-1 text-sm font-medium frint-muted">
                                                         {lead.interest || 'Interest not added'}
                                                     </p>
 
-                                                    {Object.keys(customAnswers).length > 0 && (
-                                                        <div className="mt-3 rounded-[18px] bg-[var(--frint-soft-card)] p-3">
-                                                            <p className="mb-2 text-xs font-black uppercase tracking-wide frint-muted">
-                                                                Custom answers
-                                                            </p>
-
-                                                            <div className="space-y-1">
-                                                                {Object.entries(customAnswers).map(([key, value]) => (
-                                                                    <p key={key} className="text-sm font-bold frint-muted">
-                                                                        <span className="font-black capitalize text-[var(--frint-text)]">
-                                                                            {key.replaceAll('_', ' ')}:
-                                                                        </span>{' '}
-                                                                        {formatCustomValue(value)}
-                                                                    </p>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                    )}
+                                                    <CustomAnswers answers={customAnswers} />
                                                 </td>
 
                                                 <td className="px-4 py-4 align-top">
@@ -697,9 +807,9 @@ export default function CampaignDetails() {
 
                                                 <td className="px-4 py-4 align-top">
                                                     <select
-                                                        value={lead.status}
+                                                        value={lead.status || 'new'}
                                                         onChange={(e) => updateLeadStatus(lead.id, e.target.value)}
-                                                        className="rounded-2xl border frint-border bg-[var(--frint-card)] px-3 py-2 text-sm font-bold outline-none"
+                                                        className="rounded-full border frint-border bg-[var(--frint-card)] px-3 py-2 text-sm font-medium outline-none"
                                                     >
                                                         <option value="new">New</option>
                                                         <option value="contacted">Contacted</option>
@@ -714,8 +824,8 @@ export default function CampaignDetails() {
                                 </tbody>
                             </table>
                         </div>
-                    )}
-                </div>
+                    </>
+                )}
             </section>
         </DashboardLayout>
     )

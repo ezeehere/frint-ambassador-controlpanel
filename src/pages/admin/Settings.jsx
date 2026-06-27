@@ -14,6 +14,18 @@ const initialForm = {
     maintenance_mode: false,
 }
 
+function Field({ label, hint, children }) {
+    return (
+        <label className="block">
+            <span className="mb-1.5 block text-sm font-semibold text-[var(--frint-text)]">
+                {label}
+            </span>
+            {children}
+            {hint && <span className="mt-1.5 block text-xs frint-muted">{hint}</span>}
+        </label>
+    )
+}
+
 export default function Settings() {
     const [form, setForm] = useState(initialForm)
     const [loading, setLoading] = useState(true)
@@ -45,7 +57,7 @@ export default function Settings() {
                 support_phone: result.data.support_phone || '',
                 support_whatsapp: result.data.support_whatsapp || '',
                 default_points_per_lead: result.data.default_points_per_lead || 5,
-                default_points_per_proof: result.data.default_points_per_proof || 10,
+                default_points_per_proof: result.data.default_points_per_proof || 5,
                 public_form_notice: result.data.public_form_notice || '',
                 maintenance_mode: Boolean(result.data.maintenance_mode),
             })
@@ -93,176 +105,169 @@ export default function Settings() {
         <DashboardLayout
             role="admin"
             title="Settings"
-            subtitle="Control panel defaults and public form settings"
+            subtitle="Panel defaults and public form controls"
         >
-            <section className="frint-card rounded-[30px] p-5">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <section className="frint-card rounded-[24px] p-4 sm:p-5">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-[#0060f8]">
-                            <SettingsIcon size={21} />
+                        <div className="frint-icon-chip">
+                            <SettingsIcon size={19} />
                         </div>
 
                         <div>
-                            <h2 className="text-xl font-black text-[var(--frint-text)]">
+                            <h2 className="text-lg font-semibold text-[var(--frint-text)]">
                                 Admin settings
                             </h2>
                             <p className="text-sm frint-muted">
-                                Branding, support, points, and form notice
+                                Branding, support, points, and public form notice
                             </p>
                         </div>
                     </div>
 
                     <button
                         onClick={loadSettings}
-                        className="frint-secondary-btn flex items-center justify-center gap-2 px-5 py-2.5 text-sm"
+                        className="frint-secondary-btn flex items-center justify-center gap-2 px-4 py-2 text-sm"
                     >
-                        <RefreshCw size={16} />
+                        <RefreshCw size={15} />
                         Refresh
                     </button>
                 </div>
 
                 {message && (
-                    <div className="mt-5 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
+                    <div className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
                         {message}
                     </div>
                 )}
 
                 {success && (
-                    <div className="mt-5 rounded-2xl bg-green-50 px-4 py-3 text-sm font-bold text-green-700">
+                    <div className="mt-4 rounded-2xl bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
                         {success}
                     </div>
                 )}
 
                 {loading ? (
-                    <div className="mt-6 rounded-[24px] border frint-border p-8 text-center text-sm font-bold frint-muted">
+                    <div className="mt-5 rounded-[20px] border frint-border p-6 text-center text-sm font-medium frint-muted">
                         Loading settings...
                     </div>
                 ) : (
-                    <form onSubmit={saveSettings} className="mt-6 space-y-6">
-                        <div className="grid gap-4 lg:grid-cols-2">
-                            <div>
-                                <label className="mb-2 block text-sm font-black text-[var(--frint-text)]">
-                                    App name
-                                </label>
-                                <input
-                                    value={form.app_name}
-                                    onChange={(e) => setForm({ ...form, app_name: e.target.value })}
-                                    className="w-full rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
-                                    placeholder="App name"
-                                    required
-                                />
-                            </div>
+                    <form onSubmit={saveSettings} className="mt-5 space-y-4">
+                        <div className="rounded-[20px] border frint-border bg-[var(--frint-soft-card)] p-3">
+                            <p className="mb-3 text-sm font-semibold text-[var(--frint-text)]">
+                                Public identity
+                            </p>
 
-                            <div>
-                                <label className="mb-2 block text-sm font-black text-[var(--frint-text)]">
-                                    Support email
-                                </label>
-                                <input
-                                    type="email"
-                                    value={form.support_email}
-                                    onChange={(e) => setForm({ ...form, support_email: e.target.value })}
-                                    className="w-full rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
-                                    placeholder="support@frint.in"
-                                />
-                            </div>
+                            <div className="grid gap-3 lg:grid-cols-2">
+                                <Field label="App name" hint="Shown inside internal admin screens.">
+                                    <input
+                                        value={form.app_name}
+                                        onChange={(e) => setForm({ ...form, app_name: e.target.value })}
+                                        className="frint-input"
+                                        placeholder="Frint Ambassador Control Panel"
+                                        required
+                                    />
+                                </Field>
 
-                            <div>
-                                <label className="mb-2 block text-sm font-black text-[var(--frint-text)]">
-                                    Support phone
-                                </label>
-                                <input
-                                    value={form.support_phone}
-                                    onChange={(e) => setForm({ ...form, support_phone: e.target.value })}
-                                    className="w-full rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
-                                    placeholder="Phone number"
-                                />
-                            </div>
+                                <Field label="Support email" hint="Shown if public forms are paused.">
+                                    <input
+                                        type="email"
+                                        value={form.support_email}
+                                        onChange={(e) => setForm({ ...form, support_email: e.target.value })}
+                                        className="frint-input"
+                                        placeholder="support@frint.in"
+                                    />
+                                </Field>
 
-                            <div>
-                                <label className="mb-2 block text-sm font-black text-[var(--frint-text)]">
-                                    WhatsApp support
-                                </label>
-                                <input
-                                    value={form.support_whatsapp}
-                                    onChange={(e) => setForm({ ...form, support_whatsapp: e.target.value })}
-                                    className="w-full rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
-                                    placeholder="WhatsApp number"
-                                />
+                                <Field label="Support phone" hint="Internal reference for admins.">
+                                    <input
+                                        value={form.support_phone}
+                                        onChange={(e) => setForm({ ...form, support_phone: e.target.value })}
+                                        className="frint-input"
+                                        placeholder="Phone number"
+                                    />
+                                </Field>
+
+                                <Field label="WhatsApp support" hint="Shown to students when needed.">
+                                    <input
+                                        value={form.support_whatsapp}
+                                        onChange={(e) => setForm({ ...form, support_whatsapp: e.target.value })}
+                                        className="frint-input"
+                                        placeholder="WhatsApp number or link"
+                                    />
+                                </Field>
                             </div>
                         </div>
 
-                        <div className="grid gap-4 lg:grid-cols-2">
-                            <div className="rounded-[24px] border frint-border bg-[var(--frint-soft-card)] p-4">
-                                <label className="mb-2 block text-sm font-black text-[var(--frint-text)]">
-                                    Default points per lead
-                                </label>
-                                <input
-                                    type="number"
-                                    min="0"
-                                    value={form.default_points_per_lead}
-                                    onChange={(e) =>
-                                        setForm({ ...form, default_points_per_lead: e.target.value })
-                                    }
-                                    className="w-full rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
-                                />
-                            </div>
+                        <div className="rounded-[20px] border frint-border bg-[var(--frint-soft-card)] p-3">
+                            <p className="mb-3 text-sm font-semibold text-[var(--frint-text)]">
+                                Points defaults
+                            </p>
 
-                            <div className="rounded-[24px] border frint-border bg-[var(--frint-soft-card)] p-4">
-                                <label className="mb-2 block text-sm font-black text-[var(--frint-text)]">
-                                    Default points per proof
-                                </label>
-                                <input
-                                    type="number"
-                                    min="0"
-                                    value={form.default_points_per_proof}
-                                    onChange={(e) =>
-                                        setForm({ ...form, default_points_per_proof: e.target.value })
-                                    }
-                                    className="w-full rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
-                                />
+                            <div className="grid gap-3 sm:grid-cols-2">
+                                <Field label="Default points per lead">
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={form.default_points_per_lead}
+                                        onChange={(e) =>
+                                            setForm({ ...form, default_points_per_lead: e.target.value })
+                                        }
+                                        className="frint-input"
+                                    />
+                                </Field>
+
+                                <Field label="Default points per proof">
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={form.default_points_per_proof}
+                                        onChange={(e) =>
+                                            setForm({ ...form, default_points_per_proof: e.target.value })
+                                        }
+                                        className="frint-input"
+                                    />
+                                </Field>
                             </div>
                         </div>
 
-                        <div>
-                            <label className="mb-2 block text-sm font-black text-[var(--frint-text)]">
-                                Public form notice
+                        <div className="rounded-[20px] border frint-border bg-[var(--frint-soft-card)] p-3">
+                            <Field label="Public form notice" hint="Shown on every referral form before the student submits.">
+                                <textarea
+                                    value={form.public_form_notice}
+                                    onChange={(e) =>
+                                        setForm({ ...form, public_form_notice: e.target.value })
+                                    }
+                                    className="frint-input min-h-24 resize-y"
+                                    placeholder="Submit your details carefully. Frint team may contact you for verification."
+                                />
+                            </Field>
+
+                            <label className="mt-3 flex cursor-pointer items-center justify-between gap-4 rounded-2xl bg-[var(--frint-card)] px-3 py-3">
+                                <div>
+                                    <p className="text-sm font-semibold text-[var(--frint-text)]">
+                                        Maintenance mode
+                                    </p>
+                                    <p className="mt-0.5 text-xs frint-muted">
+                                        Pause all public referral forms temporarily.
+                                    </p>
+                                </div>
+
+                                <input
+                                    type="checkbox"
+                                    checked={form.maintenance_mode}
+                                    onChange={(e) =>
+                                        setForm({ ...form, maintenance_mode: e.target.checked })
+                                    }
+                                    className="h-5 w-5"
+                                />
                             </label>
-                            <textarea
-                                value={form.public_form_notice}
-                                onChange={(e) =>
-                                    setForm({ ...form, public_form_notice: e.target.value })
-                                }
-                                className="min-h-28 w-full rounded-2xl border frint-border bg-[var(--frint-card)] px-4 py-3 text-sm font-bold outline-none"
-                                placeholder="Notice shown on public referral forms"
-                            />
                         </div>
-
-                        <label className="flex cursor-pointer items-center justify-between gap-4 rounded-[24px] border frint-border bg-[var(--frint-soft-card)] p-4">
-                            <div>
-                                <p className="text-sm font-black text-[var(--frint-text)]">
-                                    Maintenance mode
-                                </p>
-                                <p className="mt-1 text-sm frint-muted">
-                                    Keep this off unless Frint wants to pause public activity.
-                                </p>
-                            </div>
-
-                            <input
-                                type="checkbox"
-                                checked={form.maintenance_mode}
-                                onChange={(e) =>
-                                    setForm({ ...form, maintenance_mode: e.target.checked })
-                                }
-                                className="h-5 w-5"
-                            />
-                        </label>
 
                         <button
                             type="submit"
                             disabled={saving}
-                            className="frint-primary-btn flex items-center justify-center gap-2 px-6 py-3 text-sm disabled:opacity-60"
+                            className="frint-primary-btn flex w-full items-center justify-center gap-2 px-5 py-3 text-sm disabled:opacity-60 sm:w-fit"
                         >
-                            <Save size={17} />
+                            <Save size={16} />
                             {saving ? 'Saving...' : 'Save settings'}
                         </button>
                     </form>
