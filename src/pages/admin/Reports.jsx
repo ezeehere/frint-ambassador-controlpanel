@@ -2,7 +2,96 @@ import { useEffect, useMemo, useState } from 'react'
 import { Download, FileText, RefreshCw } from 'lucide-react'
 import DashboardLayout from '../../components/layout/DashboardLayout'
 import EmptyState from '../../components/ui/EmptyState'
+import StatusBadge from '../../components/ui/StatusBadge'
 import { supabase } from '../../lib/supabase'
+
+function getCustomAnswers(lead) {
+    const answers = lead?.raw_answers?.custom_answers
+
+    if (!answers || typeof answers !== 'object' || Array.isArray(answers)) {
+        return {}
+    }
+
+    return answers
+}
+
+function formatCustomAnswers(lead) {
+    const answers = getCustomAnswers(lead)
+
+    return Object.entries(answers)
+        .map(([key, value]) => `${key.replaceAll('_', ' ')}: ${String(value)}`)
+        .join(' | ')
+}
+
+function formatDate(value) {
+    if (!value) return 'Not available'
+
+    return new Intl.DateTimeFormat('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+    }).format(new Date(value))
+}
+
+function ReportMetric({ label, value }) {
+    return (
+        <div className="rounded-[18px] border frint-border bg-[var(--frint-soft-card)] px-4 py-3">
+            <p className="text-[12px] font-semibold frint-muted">{label}</p>
+            <p className="mt-1 text-[24px] font-semibold leading-none text-[var(--frint-text)]">
+                {value}
+            </p>
+        </div>
+    )
+}
+
+function ReportLeadCard({ lead }) {
+    return (
+        <article className="rounded-[18px] border frint-border bg-[var(--frint-card)] p-4">
+            <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                    <h3 className="truncate text-[15px] font-semibold text-[var(--frint-text)]">
+                        {lead.student_name || 'Unnamed student'}
+                    </h3>
+                    <p className="mt-0.5 truncate text-[13px] frint-muted">
+                        {lead.phone || lead.email || 'No contact added'}
+                    </p>
+                </div>
+
+                <StatusBadge status={lead.status || 'new'} />
+            </div>
+
+            <div className="mt-3 grid grid-cols-2 gap-2 text-[13px]">
+                <div className="rounded-2xl bg-[var(--frint-soft-card)] px-3 py-2">
+                    <p className="font-medium frint-muted">Campaign</p>
+                    <p className="mt-0.5 truncate font-semibold text-[var(--frint-text)]">
+                        {lead.campaigns?.title || 'Unknown'}
+                    </p>
+                </div>
+
+                <div className="rounded-2xl bg-[var(--frint-soft-card)] px-3 py-2">
+                    <p className="font-medium frint-muted">Ambassador</p>
+                    <p className="mt-0.5 truncate font-semibold text-[var(--frint-text)]">
+                        {lead.profiles?.full_name || lead.profiles?.email || 'Unknown'}
+                    </p>
+                </div>
+
+                <div className="rounded-2xl bg-[var(--frint-soft-card)] px-3 py-2">
+                    <p className="font-medium frint-muted">College</p>
+                    <p className="mt-0.5 truncate font-semibold text-[var(--frint-text)]">
+                        {lead.colleges?.name || 'Not selected'}
+                    </p>
+                </div>
+
+                <div className="rounded-2xl bg-[var(--frint-soft-card)] px-3 py-2">
+                    <p className="font-medium frint-muted">Submitted</p>
+                    <p className="mt-0.5 truncate font-semibold text-[var(--frint-text)]">
+                        {formatDate(lead.created_at)}
+                    </p>
+                </div>
+            </div>
+        </article>
+    )
+}
 
 export default function Reports() {
     const [campaigns, setCampaigns] = useState([])
@@ -70,6 +159,11 @@ export default function Reports() {
         return leads.filter((lead) => lead.campaigns?.id === selectedCampaign)
     }, [leads, selectedCampaign])
 
+    const selectedCampaignName = useMemo(() => {
+        if (!selectedCampaign) return 'All campaigns'
+        return campaigns.find((campaign) => campaign.id === selectedCampaign)?.title || 'Selected campaign'
+    }, [campaigns, selectedCampaign])
+
     const summary = useMemo(() => {
         const total = filteredLeads.length
         const newCount = filteredLeads.filter((lead) => lead.status === 'new').length
@@ -133,11 +227,7 @@ export default function Reports() {
             lead.campaigns?.type || '',
             lead.profiles?.full_name || lead.profiles?.email || '',
             lead.status || '',
-            lead.raw_answers?.custom_answers
-                ? Object.entries(lead.raw_answers.custom_answers)
-                    .map(([key, value]) => `${key.replaceAll('_', ' ')}: ${String(value)}`)
-                    .join(' | ')
-                : '',
+            formatCustomAnswers(lead),
             lead.created_at || '',
         ])
 
@@ -152,7 +242,9 @@ export default function Reports() {
         const link = document.createElement('a')
 
         link.href = url
-        link.download = selectedCampaign ? 'frint-campaign-report.csv' : 'frint-all-leads-report.csv'
+        link.download = selectedCampaign
+            ? 'frint-campaign-report.csv'
+            : 'frint-all-leads-report.csv'
         link.click()
 
         URL.revokeObjectURL(url)
@@ -164,179 +256,182 @@ export default function Reports() {
             title="Reports"
             subtitle="Export and review campaign performance"
         >
-            <section className="frint-card rounded-[30px] p-5">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-[#0060f8]">
-                            <FileText size={21} />
+            <section className="space-y-4">
+                <div className="frint-card rounded-[24px] p-4 sm:p-5">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="frint-icon-chip">
+                                <FileText size={19} />
+                            </div>
+
+                            <div className="min-w-0">
+                                <h2 className="truncate text-lg font-semibold text-[var(--frint-text)]">
+                                    Campaign report
+                                </h2>
+                                <p className="text-sm frint-muted">
+                                    {selectedCampaignName}
+                                </p>
+                            </div>
                         </div>
 
-                        <div>
-                            <h2 className="text-xl font-black text-[var(--frint-text)]">
-                                Campaign report
-                            </h2>
-                            <p className="text-sm frint-muted">
-                                Leads, conversion, colleges, ambassadors
-                            </p>
+                        <div className="grid gap-2 sm:flex sm:items-center">
+                            <select
+                                value={selectedCampaign}
+                                onChange={(e) => setSelectedCampaign(e.target.value)}
+                                className="frint-input min-h-10 rounded-full py-2 text-sm sm:w-56"
+                            >
+                                <option value="">All campaigns</option>
+                                {campaigns.map((campaign) => (
+                                    <option key={campaign.id} value={campaign.id}>
+                                        {campaign.title}
+                                    </option>
+                                ))}
+                            </select>
+
+                            <button
+                                onClick={loadData}
+                                className="frint-secondary-btn flex items-center justify-center gap-2 px-4 py-2 text-sm"
+                            >
+                                <RefreshCw size={15} />
+                                Refresh
+                            </button>
+
+                            <button
+                                onClick={exportCsv}
+                                disabled={filteredLeads.length === 0}
+                                className="frint-primary-btn flex items-center justify-center gap-2 px-4 py-2 text-sm disabled:opacity-50"
+                            >
+                                <Download size={15} />
+                                Export CSV
+                            </button>
                         </div>
                     </div>
 
-                    <div className="flex flex-col gap-3 sm:flex-row">
-                        <select
-                            value={selectedCampaign}
-                            onChange={(e) => setSelectedCampaign(e.target.value)}
-                            className="rounded-full border frint-border bg-[var(--frint-card)] px-4 py-2.5 text-sm font-bold outline-none"
-                        >
-                            <option value="">All campaigns</option>
-                            {campaigns.map((campaign) => (
-                                <option key={campaign.id} value={campaign.id}>
-                                    {campaign.title}
-                                </option>
-                            ))}
-                        </select>
-
-                        <button
-                            onClick={loadData}
-                            className="frint-secondary-btn flex items-center justify-center gap-2 px-5 py-2.5 text-sm"
-                        >
-                            <RefreshCw size={16} />
-                            Refresh
-                        </button>
-
-                        <button
-                            onClick={exportCsv}
-                            className="frint-primary-btn flex items-center justify-center gap-2 px-5 py-2.5 text-sm"
-                        >
-                            <Download size={16} />
-                            Export CSV
-                        </button>
-                    </div>
+                    {message && (
+                        <div className="mt-4 rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+                            {message}
+                        </div>
+                    )}
                 </div>
 
-                {message && (
-                    <div className="mt-5 rounded-2xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
-                        {message}
-                    </div>
-                )}
-
                 {loading ? (
-                    <div className="mt-5 rounded-[24px] border frint-border p-8 text-center text-sm font-bold frint-muted">
+                    <div className="frint-card rounded-[22px] p-6 text-center text-sm font-medium frint-muted">
                         Loading reports...
                     </div>
                 ) : (
                     <>
-                        <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-                            <div className="rounded-[24px] bg-[var(--frint-soft-card)] p-5">
-                                <p className="text-sm font-black frint-muted">Total leads</p>
-                                <p className="mt-2 text-3xl font-black text-[var(--frint-text)]">
-                                    {summary.total}
-                                </p>
-                            </div>
-
-                            <div className="rounded-[24px] bg-[var(--frint-soft-card)] p-5">
-                                <p className="text-sm font-black frint-muted">New</p>
-                                <p className="mt-2 text-3xl font-black text-[var(--frint-text)]">
-                                    {summary.newCount}
-                                </p>
-                            </div>
-
-                            <div className="rounded-[24px] bg-[var(--frint-soft-card)] p-5">
-                                <p className="text-sm font-black frint-muted">Registered</p>
-                                <p className="mt-2 text-3xl font-black text-[var(--frint-text)]">
-                                    {summary.registered}
-                                </p>
-                            </div>
-
-                            <div className="rounded-[24px] bg-[var(--frint-soft-card)] p-5">
-                                <p className="text-sm font-black frint-muted">Converted</p>
-                                <p className="mt-2 text-3xl font-black text-[var(--frint-text)]">
-                                    {summary.converted}
-                                </p>
-                            </div>
-
-                            <div className="rounded-[24px] bg-[var(--frint-soft-card)] p-5">
-                                <p className="text-sm font-black frint-muted">Rejected</p>
-                                <p className="mt-2 text-3xl font-black text-[var(--frint-text)]">
-                                    {summary.rejected}
-                                </p>
-                            </div>
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+                            <ReportMetric label="Total leads" value={summary.total} />
+                            <ReportMetric label="New" value={summary.newCount} />
+                            <ReportMetric label="Registered" value={summary.registered} />
+                            <ReportMetric label="Converted" value={summary.converted} />
+                            <ReportMetric label="Rejected" value={summary.rejected} />
                         </div>
 
-                        <div className="mt-5 grid gap-4 lg:grid-cols-2">
-                            <div className="rounded-[24px] border frint-border p-5">
-                                <p className="text-sm font-black frint-muted">Top college</p>
-                                <p className="mt-2 text-xl font-black text-[var(--frint-text)]">
+                        <div className="grid gap-3 lg:grid-cols-2">
+                            <div className="frint-card rounded-[22px] p-4">
+                                <p className="text-[12px] font-semibold frint-muted">Top college</p>
+                                <p className="mt-1 truncate text-[17px] font-semibold text-[var(--frint-text)]">
                                     {summary.topCollege?.[0] || 'No data'}
                                 </p>
-                                <p className="mt-1 text-sm font-bold frint-muted">
+                                <p className="mt-0.5 text-sm frint-muted">
                                     {summary.topCollege?.[1] || 0} leads
                                 </p>
                             </div>
 
-                            <div className="rounded-[24px] border frint-border p-5">
-                                <p className="text-sm font-black frint-muted">Top ambassador</p>
-                                <p className="mt-2 text-xl font-black text-[var(--frint-text)]">
+                            <div className="frint-card rounded-[22px] p-4">
+                                <p className="text-[12px] font-semibold frint-muted">Top ambassador</p>
+                                <p className="mt-1 truncate text-[17px] font-semibold text-[var(--frint-text)]">
                                     {summary.topAmbassador?.[0] || 'No data'}
                                 </p>
-                                <p className="mt-1 text-sm font-bold frint-muted">
+                                <p className="mt-0.5 text-sm frint-muted">
                                     {summary.topAmbassador?.[1] || 0} leads
                                 </p>
                             </div>
                         </div>
 
-                        <div className="mt-5 rounded-[24px] border frint-border">
+                        <div className="frint-card rounded-[24px] p-4 sm:p-5">
+                            <div className="flex items-center justify-between gap-3">
+                                <div>
+                                    <h2 className="text-lg font-semibold text-[var(--frint-text)]">
+                                        Lead records
+                                    </h2>
+                                    <p className="text-sm frint-muted">
+                                        {filteredLeads.length} rows in this report
+                                    </p>
+                                </div>
+                            </div>
+
                             {filteredLeads.length === 0 ? (
-                                <div className="p-5">
+                                <div className="mt-4">
                                     <EmptyState
                                         title="No leads in this report"
                                         message="Choose another campaign or collect new leads."
                                     />
                                 </div>
                             ) : (
-                                <div className="overflow-x-auto">
-                                    <table className="min-w-[980px] w-full text-left">
-                                        <thead className="border-b frint-border bg-[var(--frint-soft-card)]">
-                                            <tr>
-                                                <th className="px-4 py-4 text-xs font-black uppercase frint-muted">Student</th>
-                                                <th className="px-4 py-4 text-xs font-black uppercase frint-muted">Campaign</th>
-                                                <th className="px-4 py-4 text-xs font-black uppercase frint-muted">Ambassador</th>
-                                                <th className="px-4 py-4 text-xs font-black uppercase frint-muted">College</th>
-                                                <th className="px-4 py-4 text-xs font-black uppercase frint-muted">Status</th>
-                                            </tr>
-                                        </thead>
+                                <>
+                                    <div className="mt-4 grid gap-3 md:hidden">
+                                        {filteredLeads.map((lead) => (
+                                            <ReportLeadCard key={lead.id} lead={lead} />
+                                        ))}
+                                    </div>
 
-                                        <tbody>
-                                            {filteredLeads.map((lead) => (
-                                                <tr key={lead.id} className="border-b frint-border last:border-b-0">
-                                                    <td className="px-4 py-4">
-                                                        <p className="font-black text-[var(--frint-text)]">
-                                                            {lead.student_name}
-                                                        </p>
-                                                        <p className="mt-1 text-sm frint-muted">
-                                                            {lead.phone}
-                                                        </p>
-                                                    </td>
-
-                                                    <td className="px-4 py-4 text-sm font-bold frint-muted">
-                                                        {lead.campaigns?.title || 'Unknown'}
-                                                    </td>
-
-                                                    <td className="px-4 py-4 text-sm font-bold frint-muted">
-                                                        {lead.profiles?.full_name || lead.profiles?.email || 'Unknown'}
-                                                    </td>
-
-                                                    <td className="px-4 py-4 text-sm font-bold frint-muted">
-                                                        {lead.colleges?.name || 'Not selected'}
-                                                    </td>
-
-                                                    <td className="px-4 py-4 text-sm font-black capitalize text-[var(--frint-text)]">
-                                                        {lead.status}
-                                                    </td>
+                                    <div className="mt-4 hidden overflow-hidden rounded-[20px] border frint-border md:block">
+                                        <table className="w-full text-left">
+                                            <thead className="border-b frint-border bg-[var(--frint-soft-card)]">
+                                                <tr>
+                                                    <th className="px-4 py-3 text-xs font-semibold uppercase frint-muted">
+                                                        Student
+                                                    </th>
+                                                    <th className="px-4 py-3 text-xs font-semibold uppercase frint-muted">
+                                                        Campaign
+                                                    </th>
+                                                    <th className="px-4 py-3 text-xs font-semibold uppercase frint-muted">
+                                                        Ambassador
+                                                    </th>
+                                                    <th className="px-4 py-3 text-xs font-semibold uppercase frint-muted">
+                                                        College
+                                                    </th>
+                                                    <th className="px-4 py-3 text-xs font-semibold uppercase frint-muted">
+                                                        Status
+                                                    </th>
                                                 </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
+                                            </thead>
+
+                                            <tbody>
+                                                {filteredLeads.map((lead) => (
+                                                    <tr key={lead.id} className="border-b frint-border last:border-b-0">
+                                                        <td className="px-4 py-3">
+                                                            <p className="font-semibold text-[var(--frint-text)]">
+                                                                {lead.student_name || 'Unnamed'}
+                                                            </p>
+                                                            <p className="mt-0.5 text-sm frint-muted">
+                                                                {lead.phone || lead.email || 'No contact'}
+                                                            </p>
+                                                        </td>
+
+                                                        <td className="px-4 py-3 text-sm font-medium frint-muted">
+                                                            {lead.campaigns?.title || 'Unknown'}
+                                                        </td>
+
+                                                        <td className="px-4 py-3 text-sm font-medium frint-muted">
+                                                            {lead.profiles?.full_name || lead.profiles?.email || 'Unknown'}
+                                                        </td>
+
+                                                        <td className="px-4 py-3 text-sm font-medium frint-muted">
+                                                            {lead.colleges?.name || 'Not selected'}
+                                                        </td>
+
+                                                        <td className="px-4 py-3">
+                                                            <StatusBadge status={lead.status || 'new'} />
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </>
                             )}
                         </div>
                     </>
