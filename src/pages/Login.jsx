@@ -101,7 +101,7 @@ export default function Login() {
                 Welcome back
               </h2>
               <p className="mt-2 text-sm leading-5 frint-muted">
-                Sign in to continue to the ambassador panel.
+                Sign in to continue to the ambassador panel. Use email: ezazstudy@gmail.com and pass: ezaz@frint to access the dashoard.
               </p>
             </div>
 
